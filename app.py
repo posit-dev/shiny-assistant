@@ -37,9 +37,9 @@ with ui.sidebar(
     open="desktop", width=400, style="height: 100%;", gap="3px", padding="3px"
 ):
     ui.tags.button(
-        "Run code",
+        "Run visible code block",
         style="margin: 10px 80px;",
-        onclick="sendMessageToWindow(getInputText())",
+        onclick="sendVisiblePreBlockToWindow()",
     )
 
     chat = ui.Chat(
