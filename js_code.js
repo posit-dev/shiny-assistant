@@ -1,10 +1,10 @@
-function sendVisiblePreBlockToWindow() {
+function sendVisiblePreBlockToWindow(filename) {
   const text = getVisiblePreBlockText();
   if (text === null) {
     return;
   }
 
-  sendMessageToWindow(text);
+  sendFileContentToWindow(filename, text);
 }
 
 function getVisiblePreBlockText() {
@@ -54,7 +54,7 @@ function getVisiblePreBlocks(el) {
   return visiblePreBlocks;
 }
 
-function sendMessageToWindow(msg) {
+function sendFileContentToWindow(filename, msg) {
   document.getElementById("shinylive-panel").contentWindow.postMessage(
     {
       type: "message",
@@ -62,8 +62,7 @@ function sendMessageToWindow(msg) {
       text: "Hello, world!",
       files: [
         {
-          name: "app.py",
-          // content: "from shiny.express import ui\n\nui.div('Hello, world!')",
+          name: filename,
           content: msg,
           type: "text",
         },
@@ -72,3 +71,30 @@ function sendMessageToWindow(msg) {
     "*"
   );
 }
+
+// =====================================================================================
+// Code for saving/loading language switch state to localStorage
+// =====================================================================================
+const LANGUAGE_SWITCH_ID = "language_switch";
+
+function saveCheckboxState(id, value) {
+  localStorage.setItem(id, value);
+}
+
+function loadCheckboxState(id) {
+  return localStorage.getItem(id) === "true";
+}
+
+$(document).on("shiny:connected", function () {
+  // Load checkbox state when app initializes
+  var savedState = loadCheckboxState(LANGUAGE_SWITCH_ID);
+  if (savedState !== null) {
+    Shiny.setInputValue(LANGUAGE_SWITCH_ID, savedState);
+    $("#" + LANGUAGE_SWITCH_ID).prop("checked", savedState);
+  }
+});
+$(document).on("shiny:inputchanged", function (e) {
+  if (e.name === LANGUAGE_SWITCH_ID) {
+    saveCheckboxState(e.name, e.value);
+  }
+});
