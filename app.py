@@ -104,6 +104,7 @@ def shinylive_iframe():
         id="shinylive-panel",
         src=url,
         style="border: 1px solid black; flex: 1 1 auto;",
+        allow="clipboard-write",
     )
 
 
