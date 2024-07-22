@@ -43,6 +43,26 @@ ui.head_content(
 .bslib-sidebar-layout > .main {
   padding: 0;
 }
+
+.hidden {
+  visibility: hidden;
+}
+
+.sidebar-content {
+  position: relative;
+}
+
+.run-code-button {
+  display: block;
+  position: absolute;
+  top: 50px;
+  left: 60px;
+  border: 1px solid black;
+  border-radius: 20px;
+  padding: 3px 10px;
+  z-index: 10;
+}
+
 """
     )
 )
@@ -73,8 +93,8 @@ with ui.sidebar(
             file_ext = "R"
 
         ui.tags.button(
-            "Run visible code block",
-            style="margin: 10px 80px;",
+            "Run code block →",
+            class_="run-code-button",
             onclick=f"sendVisiblePreBlockToWindow('app.{file_ext}')",
         )
 

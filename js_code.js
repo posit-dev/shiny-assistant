@@ -1,3 +1,7 @@
+function chatMessagesContainer() {
+  return document.getElementById("chat");
+}
+
 function sendVisiblePreBlockToWindow(filename) {
   const text = getVisiblePreBlockText();
   if (text === null) {
@@ -8,11 +12,7 @@ function sendVisiblePreBlockToWindow(filename) {
 }
 
 function getVisiblePreBlockText() {
-  const chatMessages = document
-    .getElementById("chat")
-    .querySelector("shiny-chat-messages");
-
-  const visibleBlocks = getVisiblePreBlocks(chatMessages);
+  const visibleBlocks = getVisiblePreBlocks(chatMessagesContainer());
 
   if (visibleBlocks.length === 0) {
     return null;
@@ -27,26 +27,13 @@ function getVisiblePreBlocks(el) {
     el = document;
   }
 
-  const preBlocks = document.querySelectorAll("pre");
+  const preBlocks = chatMessagesContainer().querySelectorAll("pre");
 
   // Array to store visible code blocks
   const visiblePreBlocks = [];
 
   preBlocks.forEach((block) => {
-    const rect = block.getBoundingClientRect();
-    const containerRect = block
-      .closest(".scrollable-container")
-      ?.getBoundingClientRect() || { top: 0, bottom: window.innerHeight };
-
-    // Check if the block is visible within the viewport and its container
-    if (
-      rect.top < containerRect.bottom &&
-      rect.bottom > containerRect.top &&
-      rect.top < window.innerHeight &&
-      rect.bottom > 0 &&
-      rect.left < window.innerWidth &&
-      rect.right > 0
-    ) {
+    if (isElementInViewport(block, chatMessagesContainer())) {
       visiblePreBlocks.push(block);
     }
   });
@@ -71,6 +58,91 @@ function sendFileContentToWindow(filename, msg) {
     "*"
   );
 }
+
+function isElementInViewport(el, container) {
+  const rect = el.getBoundingClientRect();
+  const containerRect = container?.getBoundingClientRect() || {
+    top: 0,
+    bottom: window.innerHeight,
+  };
+
+  // Check if the block is visible within the viewport and its container
+  if (
+    rect.top < containerRect.bottom &&
+    rect.bottom > containerRect.top &&
+    rect.top < window.innerHeight &&
+    rect.bottom > 0 &&
+    rect.left < window.innerWidth &&
+    rect.right > 0
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function updateConditionalButtonVisibility() {
+  const preBlocks = document.querySelectorAll("pre");
+  const visiblePreBlocks = [];
+
+  preBlocks.forEach((block) => {
+    if (isElementInViewport(block, chatMessagesContainer())) {
+      visiblePreBlocks.push(block);
+    }
+  });
+
+  button = document.getElementById("run_button_ui");
+  if (visiblePreBlocks.length > 0) {
+    button.classList.remove("hidden");
+  } else {
+    button.classList.add("hidden");
+  }
+}
+
+function throttle(func, limit) {
+  let inThrottle;
+  return function () {
+    const args = arguments;
+    const context = this;
+    if (!inThrottle) {
+      func.apply(context, args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  };
+}
+
+$(document).on("shiny:sessioninitialized", function (event) {
+  setTimeout(() => {
+    updateConditionalButtonVisibility();
+    const throttledUpdate = throttle(updateConditionalButtonVisibility, 100);
+
+    // Event listeners
+    window.addEventListener("scroll", throttledUpdate);
+    window.addEventListener("resize", throttledUpdate);
+
+    chatMessagesContainer().addEventListener("scroll", throttledUpdate);
+
+    // Use ResizeObserver for container resizing
+    const resizeObserver = new ResizeObserver(throttledUpdate);
+    resizeObserver.observe(chatMessagesContainer());
+
+    const mutationObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach((node) => {
+            if (node.tagName === "PRE") {
+              updateConditionalButtonVisibility();
+            }
+          });
+        }
+      });
+    });
+    mutationObserver.observe(chatMessagesContainer(), {
+      childList: true,
+      subtree: true,
+    });
+  }, 100);
+});
 
 // =====================================================================================
 // Code for saving/loading language switch state to localStorage
