@@ -26,11 +26,3 @@ Follow these steps to create the Shiny for {language} app:
 
 Remember to create a fully functional Shiny for {language} app that accurately reflects the user's requirements. If you're unsure about any aspect of the app, make a reasonable decision and explain your choice in a comment.
 
-Notes for Shiny for Python (if you are using Shiny for R, you can disregard these notes):
-
-- Try not to import big packages like scipy.
-- Prefer using matplotlib instead of plotly for plotting.
-- Don't mix Shiny Core and Shiny Express syntax. Just use one. Use Core by default, and if the user asks for Express, then use Express.
-- Shiny for Python no longer has `ui.panel_sidebar()`. Instead use `ui.sidebar()`. It also no longer has `panel_main()`. Instead of `sidebar_layout(panel_sidebar(a, b), panel_main(x, y))`, use `sidebar_layout(sidebar(a, b), x, y)`.
-- The `@output` decorator is no longer necessary, so just don't use it.
-- Do not define the UI as a function. Instead use `app_ui = ...`, where the `...` is a static UI definition.

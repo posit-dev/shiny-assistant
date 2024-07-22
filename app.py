@@ -13,13 +13,24 @@ load_dotenv()
 llm = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 
-js_file = Path(__file__).parent / "js_code.js"
-with open(js_file, "r") as f:
-    js_code = f.read()
+app_dir = Path(__file__).parent
 
-app_prompt_file = Path(__file__).parent / "app_prompt.md"
-with open(app_prompt_file, "r") as f:
-    app_prompt_template = f.read()
+
+# Read the contents of a file, where the base path defaults to current dir of this file.
+def read_file(filename: Path | str, base_dir: Path = app_dir) -> str:
+    with open(base_dir / filename, "r") as f:
+        res = f.read()
+        return res
+
+
+js_code = read_file("js_code.js")
+
+app_prompt_template = read_file("app_prompt.md")
+
+app_prompt_extra = {
+    "r": "",
+    "python": read_file("app_prompt_python.md"),
+}
 
 
 ui.page_opts(fillable=True)
@@ -39,7 +50,9 @@ ui.head_content(
 
 @reactive.calc
 def app_prompt():
-    return app_prompt_template.format(language=language())
+    prompt = app_prompt_template.format(language=language())
+    prompt += app_prompt_extra[language()]
+    return prompt
 
 
 with ui.sidebar(
