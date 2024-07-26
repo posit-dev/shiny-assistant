@@ -23,3 +23,10 @@ Run the app:
 ```
 shiny run app.py
 ```
+
+
+To deploy (replace `my-shinyapps` with your server's nickname):
+
+```
+rsconnect deploy shiny -n my-shinyapps .
+```
