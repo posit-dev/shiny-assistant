@@ -41,23 +41,9 @@ function getVisiblePreBlocks(el) {
   return visiblePreBlocks;
 }
 
-function sendFileContentToWindow(filename, msg) {
-  document.getElementById("shinylive-panel").contentWindow.postMessage(
-    {
-      type: "message",
-      sender: "app-writer-parent",
-      text: "Hello, world!",
-      files: [
-        {
-          name: filename,
-          content: msg,
-          type: "text",
-        },
-      ],
-    },
-    "*"
-  );
-}
+// =====================================================================================
+// Functions for setting up button visibility based on visible code blocks
+// =====================================================================================
 
 function isElementInViewport(el, container) {
   const rect = el.getBoundingClientRect();
@@ -141,8 +127,74 @@ $(document).on("shiny:sessioninitialized", function (event) {
       childList: true,
       subtree: true,
     });
+
+    // When the user clicks on the send button, request the latest version of the files
+    // from the shinylive iframe. This communication is async, so the file contents will
+    // arrive later on the server side than the user chat message.
+    chatMessagesContainer().addEventListener(
+      "shiny-chat-input-sent",
+      async (e) => {
+        const fileContents = await requestFileContentsFromWindow();
+        fileContents.files.forEach((fileContent) => {
+          if (["app.py", "app.R"].includes(fileContent.name)) {
+            Shiny.setInputValue("editor_code", fileContent.content, {
+              priority: "event",
+            });
+          }
+        });
+      }
+    );
   }, 100);
 });
+
+// TODO: Get shinylive to send the latest version of the files
+
+// =====================================================================================
+// Functions for sending/requesting files from shinylive panel
+// =====================================================================================
+
+function sendFileContentToWindow(filename, msg) {
+  document.getElementById("shinylive-panel").contentWindow.postMessage(
+    {
+      type: "setFiles",
+      files: [
+        {
+          name: filename,
+          content: msg,
+          type: "text",
+        },
+      ],
+    },
+    "*"
+  );
+}
+
+function requestFileContentsFromWindow() {
+  const reply = sendMessageAndGetReply(
+    document.getElementById("shinylive-panel").contentWindow,
+    { type: "getFiles" }
+  );
+
+  return reply;
+}
+
+function postMessageAndWaitForReply(targetWindow, message) {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+
+    channel.port1.onmessage = (event) => {
+      resolve(event.data);
+    };
+
+    targetWindow.postMessage(message, "*", [channel.port2]);
+  });
+}
+
+async function sendMessageAndGetReply(targetWindow, message) {
+  const reply = await postMessageAndWaitForReply(targetWindow, message);
+  // console.log("Received reply:", reply);
+  return reply;
+}
 
 // =====================================================================================
 // Code for saving/loading language switch state to localStorage

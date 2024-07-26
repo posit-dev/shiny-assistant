@@ -104,20 +104,20 @@ with ui.sidebar(
     )
     chat.ui(height="100%")
 
-    @chat.on_user_submit
-    async def perform_chat():
-        messages = chat.messages(token_limits=(8000, 2000), format="anthropic")
-        print(messages)
-        # Create a response message stream
-        response = await llm.messages.create(
-            model="claude-3-5-sonnet-20240620",
-            system=app_prompt(),
-            messages=messages,
-            stream=True,
-            max_tokens=2000,
-        )
-        # Append the response stream into the chat
-        await chat.append_message_stream(response)
+    # @chat.on_user_submit
+    # async def perform_chat():
+    #     messages = chat.messages(token_limits=(8000, 2000), format="anthropic")
+
+    #     # Create a response message stream
+    #     response = await llm.messages.create(
+    #         model="claude-3-5-sonnet-20240620",
+    #         system=app_prompt(),
+    #         messages=messages,
+    #         stream=True,
+    #         max_tokens=2000,
+    #     )
+    #     # Append the response stream into the chat
+    #     await chat.append_message_stream(response)
 
 
 @render.ui
@@ -139,6 +139,39 @@ def shinylive_iframe():
         style="border: 1px solid black; flex: 1 1 auto;",
         allow="clipboard-write",
     )
+
+
+# TODO: Instead of using this hack for submitting submitting editor content.
+@reactive.effect
+@reactive.event(input.editor_code)
+async def print_editor_code():
+    messages = chat.messages(token_limits=(8000, 2000), format="anthropic")
+    messages[-1][
+        "content"
+    ] = f"""
+
+The following code is the current state of the app code. The text that comes after this
+app code might ask you to modify this code. If it does, please modify the code. If the
+text does not ask you to modify the code, then ignore the code.
+
+```
+{input.editor_code()}
+```
+
+{ messages[-1]["content"] }
+"""
+    print(messages[-1]["content"])
+
+    # Create a response message stream
+    response = await llm.messages.create(
+        model="claude-3-5-sonnet-20240620",
+        system=app_prompt(),
+        messages=messages,
+        stream=True,
+        max_tokens=2000,
+    )
+    # Append the response stream into the chat
+    await chat.append_message_stream(response)
 
 
 @reactive.calc
