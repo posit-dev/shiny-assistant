@@ -1,14 +1,14 @@
-import base64
 import asyncio
+import base64
 import json
 import os
 from pathlib import Path
 from urllib.parse import parse_qs
 
 from anthropic import AsyncAnthropic
-from shiny import App, reactive, render, ui
-
 from app_utils import load_dotenv
+
+from shiny import App, reactive, render, ui
 
 SHINYLIVE_BASE_URL = "https://posit-dev.github.io/shinylive/"
 
@@ -31,7 +31,7 @@ recover_code = read_file("recover.js")
 
 app_prompt_template = read_file("app_prompt.md")
 
-app_prompt_extra = {
+app_prompt_language_specific = {
     "r": "",
     "python": read_file("app_prompt_python.md"),
 }
@@ -106,8 +106,10 @@ app_ui = ui.page_sidebar(
 def server(input, output, session):
     @reactive.calc
     def app_prompt():
-        prompt = app_prompt_template.format(language=language())
-        prompt += app_prompt_extra[language()]
+        prompt = app_prompt_template.format(
+            language=language(),
+            language_specific_prompt=app_prompt_language_specific[language()],
+        )
         return prompt
 
     @render.ui
