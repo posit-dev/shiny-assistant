@@ -4,8 +4,7 @@ from pathlib import Path
 from anthropic import AsyncAnthropic
 from app_utils import load_dotenv
 
-from shiny import reactive
-from shiny.express import input, render, ui
+from shiny import App, reactive, render, ui
 
 SHINYLIVE_BASE_URL = "https://posit-dev.github.io/shinylive/"
 
@@ -32,59 +31,65 @@ app_prompt_extra = {
     "python": read_file("app_prompt_python.md"),
 }
 
+switch_tag = ui.input_switch("language_switch", "R", False)
+switch_tag.insert(0, ui.tags.span("Python ", style="padding-right: 0.3em;"))
+switch_tag.children[1].attrs.update({"style": "display: inline-block;"})
+switch_tag
 
-ui.page_opts(fillable=True)
 
-ui.tags.script(js_code)
+app_ui = ui.page_sidebar(
+    ui.sidebar(
+        ui.div(switch_tag),
+        ui.output_ui("run_button_ui"),
+        ui.chat_ui("chat", height="100%"),
+        open="desktop",
+        width=400,
+        style="height: 100%;",
+        gap="3px",
+        padding="3px",
+    ),
+    ui.tags.script(js_code),
+    ui.head_content(
+        ui.tags.style(
+            """
+            .bslib-sidebar-layout > .main {
+                padding: 0;
+            }
 
-ui.head_content(
-    ui.tags.style(
-        """
-.bslib-sidebar-layout > .main {
-  padding: 0;
-}
+            .hidden {
+                visibility: hidden;
+            }
 
-.hidden {
-  visibility: hidden;
-}
+            .sidebar-content {
+                position: relative;
+            }
 
-.sidebar-content {
-  position: relative;
-}
-
-.run-code-button {
-  display: block;
-  position: absolute;
-  top: 50px;
-  left: 60px;
-  border: 1px solid black;
-  border-radius: 20px;
-  padding: 3px 10px;
-  z-index: 10;
-}
-
-"""
-    )
+            .run-code-button {
+                display: block;
+                position: absolute;
+                top: 50px;
+                left: 60px;
+                border: 1px solid black;
+                border-radius: 20px;
+                padding: 3px 10px;
+                z-index: 10;
+            }
+            """
+        )
+    ),
+    ui.output_ui("shinylive_iframe"),
+    fillable=True,
 )
 
 
-@reactive.calc
-def app_prompt():
-    prompt = app_prompt_template.format(language=language())
-    prompt += app_prompt_extra[language()]
-    return prompt
+def server(input, output, session):
+    @reactive.calc
+    def app_prompt():
+        prompt = app_prompt_template.format(language=language())
+        prompt += app_prompt_extra[language()]
+        return prompt
 
-
-with ui.sidebar(
-    open="desktop", width=400, style="height: 100%;", gap="3px", padding="3px"
-):
-    with ui.div():
-        switch_tag = ui.input_switch("language_switch", "R", False)
-        switch_tag.insert(0, ui.tags.span("Python ", style="padding-right: 0.3em;"))
-        switch_tag.children[1].attrs.update({"style": "display: inline-block;"})
-        switch_tag
-
-    @render.express
+    @render.ui
     def run_button_ui():
         file_ext = language()
         if file_ext == "python":
@@ -92,7 +97,7 @@ with ui.sidebar(
         elif file_ext == "r":
             file_ext = "R"
 
-        ui.tags.button(
+        return ui.tags.button(
             "Run code block →",
             class_="run-code-button",
             onclick=f"sendVisiblePreBlockToWindow('app.{file_ext}')",
@@ -102,7 +107,6 @@ with ui.sidebar(
         "chat",
         messages=[],
     )
-    chat.ui(height="100%")
 
     # @chat.on_user_submit
     # async def perform_chat():
@@ -119,36 +123,34 @@ with ui.sidebar(
     #     # Append the response stream into the chat
     #     await chat.append_message_stream(response)
 
+    @render.ui
+    def shinylive_iframe():
+        if language() == "python":
+            url = (
+                SHINYLIVE_BASE_URL
+                + "py/editor/#code=NobwRAdghgtgpmAXGKAHVA6VBPMAaMAYwHsIAXOcpMASxlWICcyACAZwAsaJsM4APVIzhs2YAL4BdIA"
+            )
+        else:
+            url = (
+                SHINYLIVE_BASE_URL
+                + "r/editor/#code=NobwRAdghgtgpmAXGKAHVA6ASmANGAYwHsIAXOMpMAZwAsBLCATwEF0AKAHTG9wAIAZgFcIBUvRLtGqIaX5FZM0gEo+IAL7Kw6gLpA"
+            )
 
-@render.ui
-def shinylive_iframe():
-    if language() == "python":
-        url = (
-            SHINYLIVE_BASE_URL
-            + "py/editor/#code=NobwRAdghgtgpmAXGKAHVA6VBPMAaMAYwHsIAXOcpMASxlWICcyACAZwAsaJsM4APVIzhs2YAL4BdIA"
+        return ui.tags.iframe(
+            id="shinylive-panel",
+            src=url,
+            style="border: 1px solid black; flex: 1 1 auto;",
+            allow="clipboard-write",
         )
-    else:
-        url = (
-            SHINYLIVE_BASE_URL
-            + "r/editor/#code=NobwRAdghgtgpmAXGKAHVA6ASmANGAYwHsIAXOMpMAZwAsBLCATwEF0AKAHTG9wAIAZgFcIBUvRLtGqIaX5FZM0gEo+IAL7Kw6gLpA"
-        )
 
-    return ui.tags.iframe(
-        id="shinylive-panel",
-        src=url,
-        style="border: 1px solid black; flex: 1 1 auto;",
-        allow="clipboard-write",
-    )
-
-
-# TODO: Instead of using this hack for submitting submitting editor content.
-@reactive.effect
-@reactive.event(input.editor_code)
-async def print_editor_code():
-    messages = chat.messages(token_limits=(8000, 2000), format="anthropic")
-    messages[-1][
-        "content"
-    ] = f"""
+    # TODO: Instead of using this hack for submitting submitting editor content.
+    @reactive.effect
+    @reactive.event(input.editor_code)
+    async def print_editor_code():
+        messages = chat.messages(token_limits=(8000, 2000), format="anthropic")
+        messages[-1][
+            "content"
+        ] = f"""
 
 The following code is the current state of the app code. The text that comes after this
 app code might ask you to modify this code. If it does, please modify the code. If the
@@ -160,23 +162,25 @@ text does not ask you to modify the code, then ignore the code.
 
 { messages[-1]["content"] }
 """
-    print(messages[-1]["content"])
+        print(messages[-1]["content"])
 
-    # Create a response message stream
-    response = await llm.messages.create(
-        model="claude-3-5-sonnet-20240620",
-        system=app_prompt(),
-        messages=messages,
-        stream=True,
-        max_tokens=2000,
-    )
-    # Append the response stream into the chat
-    await chat.append_message_stream(response)
+        # Create a response message stream
+        response = await llm.messages.create(
+            model="claude-3-5-sonnet-20240620",
+            system=app_prompt(),
+            messages=messages,
+            stream=True,
+            max_tokens=2000,
+        )
+        # Append the response stream into the chat
+        await chat.append_message_stream(response)
+
+    @reactive.calc
+    def language():
+        if input.language_switch() == False:
+            return "python"
+        else:
+            return "r"
 
 
-@reactive.calc
-def language():
-    if input.language_switch() == False:
-        return "python"
-    else:
-        return "r"
+app = App(app_ui, server)
