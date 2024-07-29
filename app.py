@@ -182,12 +182,12 @@ def server(input, output, session):
         if language() == "python":
             url = (
                 SHINYLIVE_BASE_URL
-                + "py/editor/#code=NobwRAdghgtgpmAXGKAHVA6VBPMAaMAYwHsIAXOcpMASxlWICcyACAZwAsaJsM4APVIzhs2YAL4BdIA"
+                + "py/editor/#code=NobwRAdghgtgpmAXGKAHVA6VBPMAaMAYwHsIAXOcpMMAXwF0g"
             )
         else:
             url = (
                 SHINYLIVE_BASE_URL
-                + "r/editor/#code=NobwRAdghgtgpmAXGKAHVA6ASmANGAYwHsIAXOMpMAZwAsBLCATwEF0AKAHTG9wAIAZgFcIBUvRLtGqIaX5FZM0gEo+IAL7Kw6gLpA"
+                + "r/editor/#code=NobwRAdghgtgpmAXGKAHVA6ASmANGAYwHsIAXOMpMMAXwF0g"
             )
 
         return ui.tags.iframe(
