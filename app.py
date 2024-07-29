@@ -122,7 +122,7 @@ def server(input, output, session):
 
         return ui.tags.button(
             "Run code block →",
-            class_="run-code-button",
+            class_="run-code-button btn btn-primary",
             onclick=f"sendVisiblePreBlockToWindow('app.{file_ext}')",
         )
 
