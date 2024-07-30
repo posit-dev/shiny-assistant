@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import os
+import re
 from pathlib import Path
 from urllib.parse import parse_qs
 
@@ -156,12 +157,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             await sync_latest_messages()
             await reactive.flush()
 
-    @chat.transform_assistant_response
-    async def transform_response(content: str, chunk: str, done: bool) -> str:
-        if done:
-            asyncio.create_task(sync_latest_messages_locked())
-        return content
-
     # @chat.on_user_submit
     # async def perform_chat():
     #     messages = chat.messages(token_limits=(8000, 2000), format="anthropic")
@@ -221,16 +216,69 @@ to modify the code, then ignore the code.
         await sync_latest_messages()
 
         # Create a response message stream
-        response = await llm.messages.create(
+        response_stream = await llm.messages.create(
             model="claude-3-5-sonnet-20240620",
             system=app_prompt(),
             messages=messages,
             stream=True,
             max_tokens=2000,
         )
-        # Append the response stream into the chat
-        await chat.append_message_stream(response)
 
+        # async def response_stream_modified():
+        #     async for message in response_stream:
+        #         print(message)
+        #         yield message
+        #     #     if message["content"] == "```":
+        #     #         return True
+        #     # return False
+
+        content_in_shinyapp_tags.set(None)
+
+        # Append the response stream into the chat
+        await chat.append_message_stream(response_stream)
+
+    # ==================================================================================
+    # Code for finding content in the <SHINYAPP> tags and sending to the client
+    # ==================================================================================
+
+    content_in_shinyapp_tags: reactive.Value[str | None] = reactive.Value(None)
+
+    @chat.transform_assistant_response
+    async def transform_response(content: str, chunk: str, done: bool) -> str:
+        if done:
+            asyncio.create_task(sync_latest_messages_locked())
+
+        with reactive.isolate():
+            # The first time we see the </SHINYAPP> tag, set the
+            if content_in_shinyapp_tags() is None and "</SHINYAPP>" in content:
+                # Keep all the text between the SHINYAPP tags
+                shinyapp_code = re.sub(
+                    r".*<SHINYAPP>(.*)</SHINYAPP>.*", r"\1", content, flags=re.DOTALL
+                )
+                if shinyapp_code.startswith("\n"):
+                    shinyapp_code = shinyapp_code[1:]
+
+                print(shinyapp_code)
+                content_in_shinyapp_tags.set(shinyapp_code)
+
+        content = content.replace("<SHINYAPP>", "```")
+        content = content.replace("</SHINYAPP>", "```")
+
+        return content
+
+    # TODO: Is it possible to make this send sooner, before streaming has finished?
+    @reactive.effect
+    @reactive.event(content_in_shinyapp_tags)
+    async def _send_shinyapp_code():
+        if content_in_shinyapp_tags() is None:
+            return
+        await session.send_custom_message(
+            "set-shinylive-content", {"content": content_in_shinyapp_tags()}
+        )
+
+    # ==================================================================================
+    # Misc utility functions
+    # ==================================================================================
     @reactive.calc
     def language():
         if input.language_switch() == False:

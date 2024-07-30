@@ -22,7 +22,7 @@ Review these steps carefully and follow them to create the Shiny for {language} 
 
 - Ensure the app is complete and runnable. Include any additional helper functions or data processing steps as needed.
 
-- Output the entire app code within a code block. Start with import statements and end with the `app = App(...)` call.
+- Output the entire app code within `<SHINYAPP>` and `</SHINYAPP>` tags. Start with import statements and end with the `app = App(...)` call.
 
 {language_specific_prompt}
 

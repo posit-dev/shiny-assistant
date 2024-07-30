@@ -97,6 +97,7 @@ function throttle(func, limit) {
   };
 }
 
+// TODO: Replace this with Shiny.initializePromise when that lands in Shiny for Python
 $(document).on("shiny:sessioninitialized", function (event) {
   setTimeout(() => {
     updateConditionalButtonVisibility();
@@ -144,10 +145,16 @@ $(document).on("shiny:sessioninitialized", function (event) {
         });
       }
     );
+
+    // Receive custom message with app code and send to the shinylive panel.
+    Shiny.addCustomMessageHandler("set-shinylive-content", function (message) {
+      sendFileContentToWindow(
+        "app." + currentLanguageExtension(),
+        message.content
+      );
+    });
   }, 100);
 });
-
-// TODO: Get shinylive to send the latest version of the files
 
 // =====================================================================================
 // Functions for sending/requesting files from shinylive panel
@@ -217,8 +224,30 @@ $(document).on("shiny:connected", function () {
     $("#" + LANGUAGE_SWITCH_ID).prop("checked", savedState);
   }
 });
+
 $(document).on("shiny:inputchanged", function (e) {
   if (e.name === LANGUAGE_SWITCH_ID) {
     saveCheckboxState(e.name, e.value);
   }
 });
+
+// =====================================================================================
+// Misc utility functions
+// =====================================================================================
+
+function currentLanguage() {
+  const languageSwitch = document.getElementById("language_switch");
+  if (languageSwitch.checked) {
+    return "r";
+  } else {
+    return "python";
+  }
+}
+
+function currentLanguageExtension() {
+  if (currentLanguage() === "r") {
+    return "R";
+  } else {
+    return "py";
+  }
+}
