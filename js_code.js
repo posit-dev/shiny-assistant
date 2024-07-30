@@ -269,6 +269,24 @@ $(document).on("shiny:disconnected", async () => {
   // and update the URL immediately. This way, the user can either hit Reload,
   // or click the Reconnect button, and either way they'll get back to the same
   // state.
+  //
+  // The restore state starts out as two pieces of JSON that look like:
+  //
+  // chat_history =
+  //   [
+  //     { "role": "user", "content": "Hello" },
+  //     { "role": "assistant", "content": "Certainly! I can help you with that." }
+  //   ];
+  //
+  // files =
+  //   [
+  //     { "name": "app.py", "content": "print('Hello, world!')" }
+  //   ]
+  // }
+  //
+  // Each value is JSONified, base64 encoded, and then turned into query string
+  // pairs. The final URL looks like:
+  // #chat_history=<base64>&files=<base64>
 
   // We can save the chat history immediately, since we already have the data.
   // Go ahead and do that, in case something goes wrong with the (much more
@@ -302,19 +320,19 @@ $(document).on("click", "#custom-reconnect-link", () => {
 const shinyliveReadyPromise = new Promise((resolve) => {
   window.addEventListener("message", (event) => {
     if (event.data.type === "shinyliveReady") {
-      console.log("shinyliveLoaded");
       resolve();
     }
   });
 });
 
-// Now restore file contents from hash, if any
+// Now restore shinylive file contents from window.location.hash, if any. (We
+// don't need to worry about restoring the chat history here; that's being
+// handled by the server, which always has access to the initial value of
+// window.location.hash.)
 async function restoreFileContents() {
-  let hash = window.location.hash;
-  if (hash.startsWith("#")) {
-    hash = hash.slice(1);
-  }
-  if (hash === "") {
+  // Drop "#" from hash
+  let hash = window.location.hash?.replace(/^#/, "");
+  if (!hash) {
     return;
   }
   const params = new URLSearchParams(hash);
