@@ -8,7 +8,7 @@ from urllib.parse import parse_qs
 from anthropic import AsyncAnthropic
 from app_utils import load_dotenv
 
-from shiny import App, reactive, render, ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 SHINYLIVE_BASE_URL = "https://posit-dev.github.io/shinylive/"
 
@@ -103,9 +103,9 @@ app_ui = ui.page_sidebar(
 )
 
 
-def server(input, output, session):
+def server(input: Inputs, output: Outputs, session: Session):
     @reactive.calc
-    def app_prompt():
+    def app_prompt() -> str:
         prompt = app_prompt_template.format(
             language=language(),
             language_specific_prompt=app_prompt_language_specific[language()],
@@ -126,9 +126,9 @@ def server(input, output, session):
             onclick=f"sendVisiblePreBlockToWindow('app.{file_ext}')",
         )
 
-    restored_messages = []
+    restored_messages: list[dict[str, str]] = []
 
-    def parse_hash(input):
+    def parse_hash(input: Inputs) -> dict[str, list[str]]:
         with reactive.isolate():
             if ".clientdata_url_hash" not in input:
                 return {}
@@ -157,7 +157,7 @@ def server(input, output, session):
             await reactive.flush()
 
     @chat.transform_assistant_response
-    async def transform_response(content: str, chunk: str, done: bool):
+    async def transform_response(content: str, chunk: str, done: bool) -> str:
         if done:
             asyncio.create_task(sync_latest_messages_locked())
         return content
