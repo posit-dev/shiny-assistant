@@ -197,7 +197,8 @@ def server(input: Inputs, output: Outputs, session: Session):
             allow="clipboard-write",
         )
 
-    # TODO: Instead of using this hack for submitting submitting editor content.
+    # TODO: Instead of using this hack for submitting editor content, use
+    # @chat.on_user_submit. This will require some changes to the chat component.
     @reactive.effect
     @reactive.event(input.editor_code)
     async def print_editor_code():
@@ -205,10 +206,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         messages[-1][
             "content"
         ] = f"""
-
-The following code is the current state of the app code. The text that comes after this
-app code might ask you to modify this code. If it does, please modify the code. If the
-text does not ask you to modify the code, then ignore the code.
+The following is the current app code. The text that comes after this app code might ask
+you to modify the code. If it does, please modify the code. If the text does not ask you
+to modify the code, then ignore the code.
 
 ```
 {input.editor_code()}

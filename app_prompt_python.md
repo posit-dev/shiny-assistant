@@ -10,6 +10,6 @@
 
 - Do not use `panel_main()` because it no longer exists. Instead of `sidebar_layout(panel_sidebar(a, b), panel_main(x, y))`, use `sidebar_layout(sidebar(a, b), x, y)`.
 
-- The `@output` decorator is no longer necessary, so just don't use it.
+- Do not use the `@output` decorator, as it is deprecated. Instead, only use the `@render.xx` decorator.
 
 - Do not define the UI as a function. Instead use `app_ui = ...`, where the `...` is a static UI definition.
