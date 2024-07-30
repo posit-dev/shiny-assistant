@@ -261,18 +261,23 @@ to modify the code, then ignore the code.
         if done:
             asyncio.create_task(sync_latest_messages_locked())
 
-        with reactive.isolate():
-            # The first time we see the </SHINYAPP> tag, set the
-            if content_in_shinyapp_tags() is None and "</SHINYAPP>" in content:
-                # Keep all the text between the SHINYAPP tags
-                shinyapp_code = re.sub(
-                    r".*<SHINYAPP>(.*)</SHINYAPP>.*", r"\1", content, flags=re.DOTALL
-                )
-                if shinyapp_code.startswith("\n"):
-                    shinyapp_code = shinyapp_code[1:]
+        async with reactive.lock():
+            with reactive.isolate():
+                # The first time we see the </SHINYAPP> tag, set the
+                if content_in_shinyapp_tags() is None and "</SHINYAPP>" in content:
+                    # Keep all the text between the SHINYAPP tags
+                    shinyapp_code = re.sub(
+                        r".*<SHINYAPP>(.*)</SHINYAPP>.*",
+                        r"\1",
+                        content,
+                        flags=re.DOTALL,
+                    )
+                    if shinyapp_code.startswith("\n"):
+                        shinyapp_code = shinyapp_code[1:]
 
-                print(shinyapp_code)
-                content_in_shinyapp_tags.set(shinyapp_code)
+                    content_in_shinyapp_tags.set(shinyapp_code)
+
+            await reactive.flush()
 
         content = content.replace("<SHINYAPP>", "```")
         content = content.replace("</SHINYAPP>", "```")
