@@ -39,7 +39,6 @@ app_prompt_language_specific = {
 switch_tag = ui.input_switch("language_switch", "R", False)
 switch_tag.insert(0, ui.tags.span("Python ", style="padding-right: 0.3em;"))
 switch_tag.children[1].attrs.update({"style": "display: inline-block;"})
-switch_tag
 
 
 app_ui = ui.page_sidebar(
