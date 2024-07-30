@@ -85,7 +85,9 @@ app_ui = ui.page_sidebar(
     ui.output_ui("shinylive_iframe"),
     ui.tags.template(
         ui.modal(
-            "You've been disconnected",
+            "Your session has been disconnected due to inactivity or network "
+            "interruption. Click the button below to pick up where you left "
+            "off.",
             footer=[
                 ui.tags.a(
                     "Reconnect",
@@ -98,11 +100,22 @@ app_ui = ui.page_sidebar(
         ),
         id="custom_reconnect_modal",
     ),
+    ui.tags.template(
+        ui.modal(
+            "Please wait while we reconnect...",
+            footer=[],
+            easy_close=False,
+            title="Reconnecting...",
+        ),
+        id="custom_reconnecting_modal",
+    ),
     fillable=True,
 )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    restoring = True
+
     @reactive.calc
     def app_prompt() -> str:
         prompt = app_prompt_template.format(
@@ -195,6 +208,9 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.editor_code)
     async def print_editor_code():
+        nonlocal restoring
+        restoring = False
+
         messages = chat.messages(token_limits=(8000, 2000), format="anthropic")
         messages[-1][
             "content"
@@ -268,6 +284,11 @@ to modify the code, then ignore the code.
     @reactive.effect
     @reactive.event(content_in_shinyapp_tags)
     async def _send_shinyapp_code():
+        # If in the process of restoring from a previous session, don't send the
+        # code automatically.
+        if restoring:
+            return
+
         if content_in_shinyapp_tags() is None:
             return
         await session.send_custom_message(
