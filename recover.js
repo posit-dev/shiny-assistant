@@ -12,7 +12,7 @@ $(document).on("shiny:disconnected", () => {
   const template = document.querySelector("template#custom_reconnect_modal");
   const clone = document.importNode(template.content, true);
   const link = clone.querySelector("#custom-reconnect-link");
-  debugger;
+
   link.addEventListener("click", () => {
     // Form complete URL from current location, replacing only the hash
     window.location.hash =
