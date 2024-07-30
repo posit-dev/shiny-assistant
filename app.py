@@ -28,7 +28,6 @@ def read_file(filename: Path | str, base_dir: Path = app_dir) -> str:
 
 
 js_code = read_file("js_code.js")
-recover_code = read_file("recover.js")
 
 app_prompt_template = read_file("app_prompt.md")
 
@@ -55,7 +54,6 @@ app_ui = ui.page_sidebar(
         padding="3px",
     ),
     ui.tags.script(js_code),
-    ui.tags.script(recover_code),
     ui.head_content(
         ui.tags.style(
             """

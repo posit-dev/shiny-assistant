@@ -251,3 +251,76 @@ function currentLanguageExtension() {
     return "py";
   }
 }
+
+// =====================================================================================
+// Recovery code
+// =====================================================================================
+
+// Client mirror of server side chat history state
+let chat_history = [];
+
+// Server sends this on new user input or assistant response
+Shiny.addCustomMessageHandler("sync_chat_messages", (messages) => {
+  chat_history.push(...messages);
+});
+
+$(document).on("shiny:disconnected", async () => {
+  // On disconnect, we save all the state needed for restoration to the URL hash
+  // and update the URL immediately. This way, the user can either hit Reload,
+  // or click the Reconnect button, and either way they'll get back to the same
+  // state.
+
+  // We can save the chat history immediately, since we already have the data.
+  // Go ahead and do that, in case something goes wrong with the (much more
+  // complicated) process to get the file data.
+  let hash =
+    "#chat_history=" + encodeURIComponent(btoa(JSON.stringify(chat_history)));
+  window.location.hash = hash;
+
+  try {
+    // If we successfully get the code from the shinylive panel, we'll add that
+    // to the hash as well.
+    const fileContents = await requestFileContentsFromWindow();
+    hash +=
+      "&files=" + encodeURIComponent(btoa(JSON.stringify(fileContents.files)));
+    window.location.hash = hash;
+  } catch (e) {
+    console.error("Failed to get file contents from shinylive panel", e);
+  }
+
+  // Now that we're done updating the hash, we can show the reconnect modal to
+  // encourage the user to reconnect.
+  const template = document.querySelector("template#custom_reconnect_modal");
+  const clone = document.importNode(template.content, true);
+  document.body.appendChild(clone);
+});
+
+$(document).on("click", "#custom-reconnect-link", () => {
+  window.location.reload();
+});
+
+$(document).on("shiny:connected", () => {
+  window.location.hash = "";
+});
+
+// Now restore file contents from hash, if any
+function restoreFileContents(hash) {
+  if (hash.startsWith("#")) {
+    hash = hash.slice(1);
+  }
+  if (hash === "") {
+    return;
+  }
+  const params = new URLSearchParams(hash);
+  if (!params.has("files")) {
+    return;
+  }
+  const files = JSON.parse(atob(decodeURIComponent(params.get("files"))));
+  files.forEach((file) => {
+    console.log("Restoring file content", file.name, file.content);
+    sendFileContentToWindow(file.name, file.content);
+  });
+}
+
+let hash = window.location.hash;
+setTimeout(() => restoreFileContents(hash), 5000);
