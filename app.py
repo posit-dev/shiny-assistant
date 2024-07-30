@@ -1,10 +1,14 @@
+import base64
+import asyncio
+import json
 import os
 from pathlib import Path
+from urllib.parse import parse_qs
 
 from anthropic import AsyncAnthropic
-from app_utils import load_dotenv
-
 from shiny import App, reactive, render, ui
+
+from app_utils import load_dotenv
 
 SHINYLIVE_BASE_URL = "https://posit-dev.github.io/shinylive/"
 
@@ -23,6 +27,7 @@ def read_file(filename: Path | str, base_dir: Path = app_dir) -> str:
 
 
 js_code = read_file("js_code.js")
+recover_code = read_file("recover.js")
 
 app_prompt_template = read_file("app_prompt.md")
 
@@ -49,6 +54,7 @@ app_ui = ui.page_sidebar(
         padding="3px",
     ),
     ui.tags.script(js_code),
+    ui.tags.script(recover_code),
     ui.head_content(
         ui.tags.style(
             """
@@ -78,6 +84,21 @@ app_ui = ui.page_sidebar(
         )
     ),
     ui.output_ui("shinylive_iframe"),
+    ui.tags.template(
+        ui.modal(
+            "You've been disconnected",
+            footer=[
+                ui.tags.a(
+                    "Reconnect",
+                    href="#",
+                    class_="btn btn-primary",
+                    id="custom-reconnect-link",
+                )
+            ],
+            title="Disconnected",
+        ),
+        id="custom_reconnect_modal",
+    ),
     fillable=True,
 )
 
@@ -103,10 +124,41 @@ def server(input, output, session):
             onclick=f"sendVisiblePreBlockToWindow('app.{file_ext}')",
         )
 
+    restored_messages = []
+
+    def parse_hash(input):
+        with reactive.isolate():
+            if ".clientdata_url_hash" not in input:
+                return {}
+            hash = input[".clientdata_url_hash_initial"]()
+            if hash == "":
+                return {}
+            # Remove leading # from qs, if present
+            if hash.startswith("#"):
+                hash = hash[1:]
+            return parse_qs(hash, strict_parsing=True)
+
+    parsed_qs = parse_hash(input)
+    if "chat_history" in parsed_qs:
+        restored_messages = json.loads(
+            base64.b64decode(parsed_qs["chat_history"][0]).decode("utf-8")
+        )
+
     chat = ui.Chat(
         "chat",
-        messages=[],
+        messages=restored_messages,
     )
+
+    async def sync_latest_messages_locked():
+        async with reactive.lock():
+            await sync_latest_messages()
+            await reactive.flush()
+
+    @chat.transform_assistant_response
+    async def transform_response(content: str, chunk: str, done: bool):
+        if done:
+            asyncio.create_task(sync_latest_messages_locked())
+        return content
 
     # @chat.on_user_submit
     # async def perform_chat():
@@ -164,6 +216,8 @@ text does not ask you to modify the code, then ignore the code.
 """
         print(messages[-1]["content"])
 
+        await sync_latest_messages()
+
         # Create a response message stream
         response = await llm.messages.create(
             model="claude-3-5-sonnet-20240620",
@@ -181,6 +235,25 @@ text does not ask you to modify the code, then ignore the code.
             return "python"
         else:
             return "r"
+
+    last_message_sent = 0
+
+    async def sync_latest_messages():
+        nonlocal last_message_sent
+
+        with reactive.isolate():
+            messages = chat.messages(
+                format="anthropic",
+                token_limits=None,
+                transform_user="all",
+                transform_assistant=False,
+            )
+
+        new_messages = messages[last_message_sent:]
+        last_message_sent = len(messages)
+        if len(new_messages) > 0:
+            print(f"Synchronizing {len(new_messages)} messages")
+            await session.send_custom_message("sync_chat_messages", new_messages)
 
 
 app = App(app_ui, server)
