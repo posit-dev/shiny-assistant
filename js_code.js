@@ -299,12 +299,18 @@ $(document).on("click", "#custom-reconnect-link", () => {
   window.location.reload();
 });
 
-$(document).on("shiny:connected", () => {
-  window.location.hash = "";
+const shinyliveReadyPromise = new Promise((resolve) => {
+  window.addEventListener("message", (event) => {
+    if (event.data.type === "shinyliveReady") {
+      console.log("shinyliveLoaded");
+      resolve();
+    }
+  });
 });
 
 // Now restore file contents from hash, if any
-function restoreFileContents(hash) {
+async function restoreFileContents() {
+  let hash = window.location.hash;
   if (hash.startsWith("#")) {
     hash = hash.slice(1);
   }
@@ -315,12 +321,15 @@ function restoreFileContents(hash) {
   if (!params.has("files")) {
     return;
   }
+  // Wait for shinylive to come online
+  await shinyliveReadyPromise;
   const files = JSON.parse(atob(decodeURIComponent(params.get("files"))));
   files.forEach((file) => {
-    console.log("Restoring file content", file.name, file.content);
+    console.log("Restoring file content:", file.name);
     sendFileContentToWindow(file.name, file.content);
   });
+  window.location.hash = "";
 }
-
-let hash = window.location.hash;
-setTimeout(() => restoreFileContents(hash), 5000);
+restoreFileContents().catch((err) => {
+  console.error("Failed to restore", err);
+});
