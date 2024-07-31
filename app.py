@@ -41,6 +41,20 @@ switch_tag.insert(0, ui.tags.span("Python ", style="padding-right: 0.3em;"))
 switch_tag.children[1].attrs.update({"style": "display: inline-block;"})
 
 
+greeting = """
+Hello! I'm here to help you with Shiny. You can ask me questions about how to use Shiny,
+to explain how certain things work in Shiny, or even ask me to build a Shiny app for
+you.
+
+Here are some examples:
+
+- "How do I add a plot to an application?"
+- "Create an app that demonstrates a linear regression."
+- "Show me how make it so a table will update only after a button is clicked."
+
+Let's get started! 🚀
+"""
+
 app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.div(switch_tag),
@@ -157,6 +171,10 @@ def server(input: Inputs, output: Outputs, session: Session):
             base64.b64decode(parsed_qs["chat_history"][0]).decode("utf-8")
         )
 
+    # Add a starting message, but only if no messages were restored.
+    if len(restored_messages) == 0:
+        restored_messages.insert(0, {"role": "assistant", "content": greeting})
+
     chat = ui.Chat(
         "chat",
         messages=restored_messages,
@@ -206,7 +224,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     # @chat.on_user_submit. This will require some changes to the chat component.
     @reactive.effect
     @reactive.event(input.editor_code)
-    async def print_editor_code():
+    async def _send_user_message():
         nonlocal restoring
         restoring = False
 
@@ -237,14 +255,6 @@ to modify the code, then ignore the code.
             max_tokens=2000,
         )
 
-        # async def response_stream_modified():
-        #     async for message in response_stream:
-        #         print(message)
-        #         yield message
-        #     #     if message["content"] == "```":
-        #     #         return True
-        #     # return False
-
         content_in_shinyapp_tags.set(None)
 
         # Append the response stream into the chat
@@ -261,23 +271,26 @@ to modify the code, then ignore the code.
         if done:
             asyncio.create_task(sync_latest_messages_locked())
 
-        async with reactive.lock():
-            with reactive.isolate():
-                # The first time we see the </SHINYAPP> tag, set the
-                if content_in_shinyapp_tags() is None and "</SHINYAPP>" in content:
-                    # Keep all the text between the SHINYAPP tags
-                    shinyapp_code = re.sub(
-                        r".*<SHINYAPP>(.*)</SHINYAPP>.*",
-                        r"\1",
-                        content,
-                        flags=re.DOTALL,
-                    )
-                    if shinyapp_code.startswith("\n"):
-                        shinyapp_code = shinyapp_code[1:]
+        # Only do this when streaming. (We don't to run it when restoring messages,
+        # which does not use streaming.)
+        if chunk != "":
+            async with reactive.lock():
+                with reactive.isolate():
+                    # The first time we see the </SHINYAPP> tag, set the
+                    if content_in_shinyapp_tags() is None and "</SHINYAPP>" in content:
+                        # Keep all the text between the SHINYAPP tags
+                        shinyapp_code = re.sub(
+                            r".*<SHINYAPP>(.*)</SHINYAPP>.*",
+                            r"\1",
+                            content,
+                            flags=re.DOTALL,
+                        )
+                        if shinyapp_code.startswith("\n"):
+                            shinyapp_code = shinyapp_code[1:]
 
-                    content_in_shinyapp_tags.set(shinyapp_code)
+                        content_in_shinyapp_tags.set(shinyapp_code)
 
-            await reactive.flush()
+                await reactive.flush()
 
         content = content.replace("<SHINYAPP>", "```")
         content = content.replace("</SHINYAPP>", "```")
