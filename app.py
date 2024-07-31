@@ -183,7 +183,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     async def sync_latest_messages_locked():
         async with reactive.lock():
             await sync_latest_messages()
-            await reactive.flush()
 
     # @chat.on_user_submit
     # async def perform_chat():
@@ -223,7 +222,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     # TODO: Instead of using this hack for submitting editor content, use
     # @chat.on_user_submit. This will require some changes to the chat component.
     @reactive.effect
-    @reactive.event(input.editor_code)
+    @reactive.event(input.message_trigger)
     async def _send_user_message():
         nonlocal restoring
         restoring = False
@@ -297,7 +296,6 @@ to modify the code, then ignore the code.
 
         return content
 
-    # TODO: Is it possible to make this send sooner, before streaming has finished?
     @reactive.effect
     @reactive.event(content_in_shinyapp_tags)
     async def _send_shinyapp_code():

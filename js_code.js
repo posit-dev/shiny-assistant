@@ -132,6 +132,7 @@ $(document).on("shiny:sessioninitialized", function (event) {
     // When the user clicks on the send button, request the latest version of the files
     // from the shinylive iframe. This communication is async, so the file contents will
     // arrive later on the server side than the user chat message.
+    messageTriggerCounter = 0;
     chatMessagesContainer().addEventListener(
       "shiny-chat-input-sent",
       async (e) => {
@@ -141,6 +142,9 @@ $(document).on("shiny:sessioninitialized", function (event) {
             Shiny.setInputValue("editor_code", fileContent.content, {
               priority: "event",
             });
+            // This can be removed once we fix
+            // https://github.com/posit-dev/py-shiny/issues/1600
+            Shiny.setInputValue("message_trigger", messageTriggerCounter++);
           }
         });
       }
