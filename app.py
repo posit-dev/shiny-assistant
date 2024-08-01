@@ -27,8 +27,6 @@ def read_file(filename: Path | str, base_dir: Path = app_dir) -> str:
         return res
 
 
-js_code = read_file("js_code.js")
-
 app_prompt_template = read_file("app_prompt.md")
 
 app_prompt_language_specific = {
@@ -66,35 +64,8 @@ app_ui = ui.page_sidebar(
         gap="3px",
         padding="3px",
     ),
-    ui.tags.script(js_code),
-    ui.head_content(
-        ui.tags.style(
-            """
-            .bslib-sidebar-layout > .main {
-                padding: 0;
-            }
-
-            .hidden {
-                visibility: hidden;
-            }
-
-            .sidebar-content {
-                position: relative;
-            }
-
-            .run-code-button {
-                display: block;
-                position: absolute;
-                top: 50px;
-                left: 60px;
-                border: 1px solid black;
-                border-radius: 20px;
-                padding: 3px 10px;
-                z-index: 10;
-            }
-            """
-        )
-    ),
+    ui.tags.script(read_file("scripts.js")),
+    ui.head_content(ui.tags.style(read_file("style.css"))),
     ui.output_ui("shinylive_iframe"),
     ui.tags.template(
         ui.modal(

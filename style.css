@@ -1,0 +1,29 @@
+.bslib-sidebar-layout > .main {
+  padding: 0;
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+.sidebar-content {
+  position: relative;
+}
+
+.run-code-button {
+  display: block;
+  position: absolute;
+  top: 50px;
+  left: 60px;
+  border: 1px solid black;
+  border-radius: 20px;
+  padding: 3px 10px;
+  z-index: 10;
+}
+
+/* Make it so the switch doesn't change color when toggled. Note that the circle SVG is
+just borrowed from the `:checked` state for switches.*/
+#language_switch {
+  --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+  background-color: var(--bs-blue);
+}
