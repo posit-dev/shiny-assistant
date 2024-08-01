@@ -296,7 +296,8 @@ $(document).on("shiny:disconnected", async () => {
   // Go ahead and do that, in case something goes wrong with the (much more
   // complicated) process to get the file data.
   let hash =
-    "#chat_history=" + encodeURIComponent(btoa(JSON.stringify(chat_history)));
+    "#chat_history=" +
+    encodeURIComponent(encodeToBase64(JSON.stringify(chat_history)));
   window.location.hash = hash;
 
   try {
@@ -304,7 +305,8 @@ $(document).on("shiny:disconnected", async () => {
     // to the hash as well.
     const fileContents = await requestFileContentsFromWindow();
     hash +=
-      "&files=" + encodeURIComponent(btoa(JSON.stringify(fileContents.files)));
+      "&files=" +
+      encodeURIComponent(encodeToBase64(JSON.stringify(fileContents.files)));
     window.location.hash = hash;
   } catch (e) {
     console.error("Failed to get file contents from shinylive panel", e);
@@ -345,7 +347,9 @@ async function restoreFileContents() {
   }
   // Wait for shinylive to come online
   await shinyliveReadyPromise;
-  const files = JSON.parse(atob(decodeURIComponent(params.get("files"))));
+  const files = JSON.parse(
+    decodeFromBase64(decodeURIComponent(params.get("files")))
+  );
   files.forEach((file) => {
     console.log("Restoring file content:", file.name);
     sendFileContentToWindow(file.name, file.content);
@@ -355,3 +359,22 @@ async function restoreFileContents() {
 restoreFileContents().catch((err) => {
   console.error("Failed to restore", err);
 });
+
+// =====================================================================================
+// Unicode-aware base64 encoding/decoding
+// =====================================================================================
+
+function encodeToBase64(str) {
+  const encoder = new TextEncoder();
+  const uint8Array = encoder.encode(str);
+  return btoa(String.fromCharCode.apply(null, uint8Array));
+}
+
+function decodeFromBase64(base64) {
+  const binaryString = atob(base64);
+  const uint8Array = Uint8Array.from(binaryString, (char) =>
+    char.charCodeAt(0)
+  );
+  const decoder = new TextDecoder();
+  return decoder.decode(uint8Array);
+}
