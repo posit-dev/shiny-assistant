@@ -30,7 +30,7 @@ def read_file(filename: Path | str, base_dir: Path = app_dir) -> str:
 app_prompt_template = read_file("app_prompt.md")
 
 app_prompt_language_specific = {
-    "r": "",
+    "r": read_file("app_prompt_r.md"),
     "python": read_file("app_prompt_python.md"),
 }
 

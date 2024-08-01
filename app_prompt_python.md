@@ -12,6 +12,8 @@
 
 - Do not define the UI as a function. Instead use `app_ui = ...`, where the `...` is a static UI definition.
 
+- If the app makes HTTP requests, use the `urllib3` library.
+
 - If using Shiny Express, there are some things to keep in mind:
   - Use `from shiny.express import input, ui, ...`, where the `...` represents other necessary components.
   - Do not try to import `reactive` from `shiny.express`. It is imported from `shiny`.
