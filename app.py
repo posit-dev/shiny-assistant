@@ -12,6 +12,7 @@ from app_utils import load_dotenv
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
 SHINYLIVE_BASE_URL = "https://posit-dev.github.io/shinylive/"
+# SHINYLIVE_BASE_URL = "http://localhost:3000/"
 
 load_dotenv()
 llm = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
@@ -308,7 +309,9 @@ to modify the code, then ignore the code.
         last_message_sent = len(messages)
         if len(new_messages) > 0:
             print(f"Synchronizing {len(new_messages)} messages")
-            await session.send_custom_message("sync_chat_messages", new_messages)
+            await session.send_custom_message(
+                "sync-chat-messages", {"messages": new_messages}
+            )
 
 
 app = App(app_ui, server)

@@ -264,8 +264,8 @@ function currentLanguageExtension() {
 let chat_history = [];
 
 // Server sends this on new user input or assistant response
-Shiny.addCustomMessageHandler("sync_chat_messages", (messages) => {
-  chat_history.push(...messages);
+Shiny.addCustomMessageHandler("sync-chat-messages", (msg) => {
+  chat_history.push(...msg.messages);
 });
 
 $(document).on("shiny:disconnected", async () => {
