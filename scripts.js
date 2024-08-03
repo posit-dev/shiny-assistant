@@ -152,10 +152,7 @@ $(document).on("shiny:sessioninitialized", function (event) {
 
     // Receive custom message with app code and send to the shinylive panel.
     Shiny.addCustomMessageHandler("set-shinylive-content", function (message) {
-      sendFileContentToWindow(
-        "app." + currentLanguageExtension(),
-        message.content
-      );
+      sendFileContentsToWindow(message.files);
     });
   }, 100);
 });
@@ -175,6 +172,16 @@ function sendFileContentToWindow(filename, msg) {
           type: "text",
         },
       ],
+    },
+    "*"
+  );
+}
+
+function sendFileContentsToWindow(fileContents) {
+  document.getElementById("shinylive-panel").contentWindow.postMessage(
+    {
+      type: "setFiles",
+      files: fileContents,
     },
     "*"
   );

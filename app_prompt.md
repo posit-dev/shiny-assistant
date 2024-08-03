@@ -25,7 +25,9 @@ Review these steps carefully and follow them to create the Shiny for {language} 
 
 - Ensure the app is complete and runnable. Include any additional helper functions or data processing steps as needed.
 
-- Output the entire app code within `<SHINYAPP>` and `</SHINYAPP>` tags. Start with import statements and end with the `app = App(...)` call. Only put it in those tags if it is a complete app. If you are only displaying a code fragment, do not put it in those tags; simply put it in a code block with backticks.
+- Output the entire app code within `<SHINYAPP>` and `</SHINYAPP>` tags. Inside those tags, each file should be within `<FILE NAME="...">` and `</FILE>` tags, where the `...` is replaced with the filename.
+
+- Start with import statements and end with the `app = App(...)` call. Only put it in those tags if it is a complete app. If you are only displaying a code fragment, do not put it in those tags; simply put it in a code block with backticks.
 
 {language_specific_prompt}
 

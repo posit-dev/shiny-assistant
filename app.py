@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import asyncio
 import base64
 import json
 import os
 import re
 from pathlib import Path
+from typing import Literal, TypedDict
 from urllib.parse import parse_qs
 
 from anthropic import AsyncAnthropic
@@ -53,6 +56,13 @@ Here are some examples:
 
 Let's get started! 🚀
 """
+
+
+class FileContent(TypedDict):
+    name: str
+    content: str
+    type: Literal["text", "binary"]
+
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
@@ -156,21 +166,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         async with reactive.lock():
             await sync_latest_messages()
 
-    # @chat.on_user_submit
-    # async def perform_chat():
-    #     messages = chat.messages(token_limits=(8000, 2000), format="anthropic")
-
-    #     # Create a response message stream
-    #     response = await llm.messages.create(
-    #         model="claude-3-5-sonnet-20240620",
-    #         system=app_prompt(),
-    #         messages=messages,
-    #         stream=True,
-    #         max_tokens=2000,
-    #     )
-    #     # Append the response stream into the chat
-    #     await chat.append_message_stream(response)
-
     @render.ui
     def shinylive_iframe():
         if language() == "python":
@@ -226,7 +221,7 @@ to modify the code, then ignore the code.
             max_tokens=2000,
         )
 
-        content_in_shinyapp_tags.set(None)
+        files_in_shinyapp_tags.set(None)
 
         # Append the response stream into the chat
         await chat.append_message_stream(response_stream)
@@ -235,12 +230,18 @@ to modify the code, then ignore the code.
     # Code for finding content in the <SHINYAPP> tags and sending to the client
     # ==================================================================================
 
-    content_in_shinyapp_tags: reactive.Value[str | None] = reactive.Value(None)
+    files_in_shinyapp_tags: reactive.Value[list[FileContent] | None] = reactive.Value(
+        None
+    )
 
     @chat.transform_assistant_response
     async def transform_response(content: str, chunk: str, done: bool) -> str:
         if done:
             asyncio.create_task(sync_latest_messages_locked())
+
+        # TODO: This is inefficient because it does this processing for every chunk,
+        # which means it will process the same content multiple times. It would be
+        # better to do this incrementally as the content streams in.
 
         # Only do this when streaming. (We don't to run it when restoring messages,
         # which does not use streaming.)
@@ -248,38 +249,30 @@ to modify the code, then ignore the code.
             async with reactive.lock():
                 with reactive.isolate():
                     # The first time we see the </SHINYAPP> tag, set the
-                    if content_in_shinyapp_tags() is None and "</SHINYAPP>" in content:
-                        # Keep all the text between the SHINYAPP tags
-                        shinyapp_code = re.sub(
-                            r".*<SHINYAPP>(.*)</SHINYAPP>.*",
-                            r"\1",
-                            content,
-                            flags=re.DOTALL,
-                        )
-                        if shinyapp_code.startswith("\n"):
-                            shinyapp_code = shinyapp_code[1:]
-
-                        content_in_shinyapp_tags.set(shinyapp_code)
+                    if files_in_shinyapp_tags() is None and "</SHINYAPP>" in content:
+                        files = shinyapp_tag_contents_to_filecontents(content)
+                        files_in_shinyapp_tags.set(files)
 
                 await reactive.flush()
 
-        content = content.replace("<SHINYAPP>", "```")
-        content = content.replace("</SHINYAPP>", "```")
+        content = content.replace("\n<SHINYAPP>", "")
+        content = content.replace("\n</SHINYAPP>", "")
+        content = re.sub('\n<FILE NAME="(.*?)">', r"\n```\n## file: \1\n", content)
+        content = content.replace("\n</FILE>", "\n```")
 
         return content
 
     @reactive.effect
-    @reactive.event(content_in_shinyapp_tags)
+    @reactive.event(files_in_shinyapp_tags)
     async def _send_shinyapp_code():
         # If in the process of restoring from a previous session, don't send the
         # code automatically.
         if restoring:
             return
-
-        if content_in_shinyapp_tags() is None:
+        if files_in_shinyapp_tags() is None:
             return
         await session.send_custom_message(
-            "set-shinylive-content", {"content": content_in_shinyapp_tags()}
+            "set-shinylive-content", {"files": files_in_shinyapp_tags()}
         )
 
     # ==================================================================================
@@ -312,6 +305,33 @@ to modify the code, then ignore the code.
             await session.send_custom_message(
                 "sync-chat-messages", {"messages": new_messages}
             )
+
+
+def shinyapp_tag_contents_to_filecontents(input: str) -> list[FileContent]:
+    """
+    Extracts the files and their contents from the <SHINYAPP>...</SHINYAPP> tags in the
+    input string.
+    """
+    # Keep the text between the SHINYAPP tags
+    shinyapp_code = re.sub(
+        r".*<SHINYAPP>(.*)</SHINYAPP>.*",
+        r"\1",
+        input,
+        flags=re.DOTALL,
+    )
+    if shinyapp_code.startswith("\n"):
+        shinyapp_code = shinyapp_code[1:]
+
+    # Find each <FILE NAME="...">...</FILE> tag and extract the contents and file name
+    file_contents: list[FileContent] = []
+    for match in re.finditer(r"<FILE NAME=\"(.*?)\">(.*?)</FILE>", input, re.DOTALL):
+        name = match.group(1)
+        content = match.group(2)
+        if content.startswith("\n"):
+            content = content[1:]
+        file_contents.append({"name": name, "content": content, "type": "text"})
+
+    return file_contents
 
 
 app = App(app_ui, server)
