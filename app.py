@@ -198,9 +198,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         messages[-1][
             "content"
         ] = f"""
-The following is the current app code. The text that comes after this app code might ask
-you to modify the code. If it does, please modify the code. If the text does not ask you
-to modify the code, then ignore the code.
+The following is the current app code in JSON format. The text that comes after this app
+code might ask you to modify the code. If it does, please modify the code. If the text
+does not ask you to modify the code, then ignore the code.
 
 ```
 {input.editor_code()}

@@ -137,16 +137,12 @@ $(document).on("shiny:sessioninitialized", function (event) {
       "shiny-chat-input-sent",
       async (e) => {
         const fileContents = await requestFileContentsFromWindow();
-        fileContents.files.forEach((fileContent) => {
-          if (["app.py", "app.R"].includes(fileContent.name)) {
-            Shiny.setInputValue("editor_code", fileContent.content, {
-              priority: "event",
-            });
-            // This can be removed once we fix
-            // https://github.com/posit-dev/py-shiny/issues/1600
-            Shiny.setInputValue("message_trigger", messageTriggerCounter++);
-          }
+        Shiny.setInputValue("editor_code", fileContents, {
+          priority: "event",
         });
+        // This can be removed once we fix
+        // https://github.com/posit-dev/py-shiny/issues/1600
+        Shiny.setInputValue("message_trigger", messageTriggerCounter++);
       }
     );
 
@@ -187,8 +183,8 @@ function sendFileContentsToWindow(fileContents) {
   );
 }
 
-function requestFileContentsFromWindow() {
-  const reply = sendMessageAndGetReply(
+async function requestFileContentsFromWindow() {
+  const reply = await postMessageAndWaitForReply(
     document.getElementById("shinylive-panel").contentWindow,
     { type: "getFiles" }
   );
@@ -206,12 +202,6 @@ function postMessageAndWaitForReply(targetWindow, message) {
 
     targetWindow.postMessage(message, "*", [channel.port2]);
   });
-}
-
-async function sendMessageAndGetReply(targetWindow, message) {
-  const reply = await postMessageAndWaitForReply(targetWindow, message);
-  // console.log("Received reply:", reply);
-  return reply;
 }
 
 // =====================================================================================
