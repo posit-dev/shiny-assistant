@@ -64,12 +64,26 @@ class FileContent(TypedDict):
 
 
 switch_tag = ui.input_switch("language_switch", "R", False)
+switch_tag.attrs.update(
+    {"style": "width: unset; display: inline-block; padding: 0 20px;"}
+)
 switch_tag.children[0].attrs.update({"style": "display: inline-block;"})
 switch_tag.insert(0, ui.tags.span("Python ", style="padding-right: 0.3em;"))
 
+verbosity_tag = ui.input_select(
+    "verbosity", None, ["Code only", "Concise", "Verbose"], selected="Concise"
+)
+
+verbosity_tag.attrs.update(
+    {"style": "width: unset; display: inline-block; padding: 0 20px;"}
+)
+
 app_ui = ui.page_sidebar(
     ui.sidebar(
-        ui.div(switch_tag),
+        ui.div(
+            switch_tag,
+            verbosity_tag,
+        ),
         ui.output_ui("run_button_ui"),
         ui.chat_ui("chat", height="100%"),
         open="desktop",
@@ -116,9 +130,21 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.calc
     def app_prompt() -> str:
+        verbosity_instructions = {
+            "Code only": "If you are providing a Shiny app, please provide only the code."
+            " Do not add any other text, explanations, or instructions unless"
+            " absolutely necessary. Do not tell the user how to install Shiny or run"
+            " the app, because they already know that.",
+            "Concise": "Be concise when explaining the code."
+            " Do not tell the user how to install Shiny or run the app, because they"
+            " already know that.",
+            "Verbose": "",  # The default behavior of Claude is to be verbose
+        }
+
         prompt = app_prompt_template.format(
             language=language(),
             language_specific_prompt=app_prompt_language_specific[language()],
+            verbosity=verbosity_instructions[input.verbosity()],
         )
         return prompt
 

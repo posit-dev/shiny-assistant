@@ -207,30 +207,39 @@ function postMessageAndWaitForReply(targetWindow, message) {
 // =====================================================================================
 // Code for saving/loading language switch state to localStorage
 // =====================================================================================
-const LANGUAGE_SWITCH_ID = "language_switch";
 
-function saveCheckboxState(id, value) {
-  localStorage.setItem(id, value);
-}
+const LANGUAGE_INPUT_ID = "language_switch";
+const VERBOSITY_INPUT_ID = "verbosity";
 
-function loadCheckboxState(id) {
-  return localStorage.getItem(id) === "true";
-}
+$(document).on("shiny:sessioninitialized", function () {
+  // Checkbox state is stored as a string in localstorage
+  const languageSavedState = localStorage.getItem(LANGUAGE_INPUT_ID) === "true";
+  if (languageSavedState !== null) {
+    setInputValue(LANGUAGE_INPUT_ID, languageSavedState);
+  }
 
-$(document).on("shiny:connected", function () {
-  // Load checkbox state when app initializes
-  var savedState = loadCheckboxState(LANGUAGE_SWITCH_ID);
-  if (savedState !== null) {
-    Shiny.setInputValue(LANGUAGE_SWITCH_ID, savedState);
-    $("#" + LANGUAGE_SWITCH_ID).prop("checked", savedState);
+  const verbositySavedState = localStorage.getItem(VERBOSITY_INPUT_ID);
+  if (verbositySavedState !== null) {
+    setInputValue(VERBOSITY_INPUT_ID, verbositySavedState);
   }
 });
 
 $(document).on("shiny:inputchanged", function (e) {
-  if (e.name === LANGUAGE_SWITCH_ID) {
-    saveCheckboxState(e.name, e.value);
+  if ([LANGUAGE_INPUT_ID, VERBOSITY_INPUT_ID].includes(e.name)) {
+    localStorage.setItem(e.name, e.value);
   }
 });
+
+function setInputValue(inputId, value) {
+  const el = document.getElementById(inputId);
+  if (!el) {
+    console.error("Element with id '" + inputId + "' not found");
+    return;
+  }
+  const binding = $(el).data("shiny-input-binding");
+  binding.setValue(el, value);
+  $(el).trigger("change");
+}
 
 // =====================================================================================
 // Misc utility functions
