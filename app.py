@@ -14,8 +14,7 @@ from app_utils import load_dotenv
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 
-SHINYLIVE_BASE_URL = "https://posit-dev.github.io/shinylive/"
-# SHINYLIVE_BASE_URL = "http://localhost:3000/"
+SHINYLIVE_BASE_URL = "https://shinylive.io/"
 
 load_dotenv()
 llm = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
