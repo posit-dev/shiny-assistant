@@ -8,7 +8,11 @@
 
 - Do not use `panel_main()` because it no longer exists. Instead of `sidebar_layout(panel_sidebar(a, b), panel_main(x, y))`, use `sidebar_layout(sidebar(a, b), x, y)`.
 
-- Do not use the `@output` decorator, as it is deprecated. Instead, only use the `@render.xx` decorator.
+- Never use the `@output` decorator, as it is deprecated. Instead, only use the `@render.xx` decorator.
+
+- Avoid using `@render.image`. Prefer to use `@render.ui` instead and return a `ui.img()` object.
+
+- If you have dynamic UI returning a `ui.img()`, use `@render.ui`, not `@render.image`, and use `ui.output_ui()` instead of `ui.output_image()`.
 
 - Do not define the UI as a function. Instead use `app_ui = ...`, where the `...` is a static UI definition.
 
