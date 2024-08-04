@@ -17,7 +17,11 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 SHINYLIVE_BASE_URL = "https://shinylive.io/"
 
 load_dotenv()
-llm = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+api_key = os.environ.get("ANTHROPIC_API_KEY")
+if api_key is None:
+    raise ValueError("Please set the ANTHROPIC_API_KEY environment variable.")
+else:
+    llm = AsyncAnthropic(api_key=api_key)
 
 
 app_dir = Path(__file__).parent
