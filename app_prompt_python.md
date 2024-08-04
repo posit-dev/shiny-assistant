@@ -19,6 +19,8 @@
   - Do not try to import `reactive` from `shiny.express`. It is imported from `shiny`.
   - For nestable UI components, like `ui.card()`, it should be used as `with ui.card(): ...`, instead of `ui.card(...)`
 
+- If using Shiny Core, end with the `app = App(...)` call.
+
 - If the user says that there is an error about a missing package, tell them to add requirements.txt with that package.
 
 - Put all required packages in a `requirements.txt` file, and present that file inside of the `<SHINYAPP>` tags.
