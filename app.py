@@ -41,10 +41,6 @@ app_prompt_language_specific = {
     "python": read_file("app_prompt_python.md"),
 }
 
-switch_tag = ui.input_switch("language_switch", "R", False)
-switch_tag.insert(0, ui.tags.span("Python ", style="padding-right: 0.3em;"))
-switch_tag.children[1].attrs.update({"style": "display: inline-block;"})
-
 
 greeting = """
 Hello! I'm here to help you with Shiny. You can ask me questions about how to use Shiny,
@@ -66,6 +62,10 @@ class FileContent(TypedDict):
     content: str
     type: Literal["text", "binary"]
 
+
+switch_tag = ui.input_switch("language_switch", "R", False)
+switch_tag.children[0].attrs.update({"style": "display: inline-block;"})
+switch_tag.insert(0, ui.tags.span("Python ", style="padding-right: 0.3em;"))
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
