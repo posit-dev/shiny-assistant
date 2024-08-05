@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Literal, TypedDict
 from urllib.parse import parse_qs
 
-from anthropic import AsyncAnthropic
+from anthropic import AsyncAnthropic, AuthenticationError
 from app_utils import load_dotenv
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
@@ -242,13 +242,17 @@ does not ask you to modify the code, then ignore the code.
         await sync_latest_messages()
 
         # Create a response message stream
-        response_stream = await llm.messages.create(
-            model="claude-3-5-sonnet-20240620",
-            system=app_prompt(),
-            messages=messages,
-            stream=True,
-            max_tokens=3000,
-        )
+        try:
+            response_stream = await llm.messages.create(
+                model="claude-3-5-sonnet-20240620",
+                system=app_prompt(),
+                messages=messages,
+                stream=True,
+                max_tokens=3000,
+            )
+        except AuthenticationError as e:
+            await chat._raise_exception(e)
+            return
 
         files_in_shinyapp_tags.set(None)
 
