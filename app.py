@@ -223,7 +223,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         nonlocal restoring
         restoring = False
 
-        messages = chat.messages(token_limits=(8000, 2000), format="anthropic")
+        messages = chat.messages(token_limits=(8000, 3000), format="anthropic")
         messages[-1][
             "content"
         ] = f"""
@@ -247,7 +247,7 @@ does not ask you to modify the code, then ignore the code.
             system=app_prompt(),
             messages=messages,
             stream=True,
-            max_tokens=2000,
+            max_tokens=3000,
         )
 
         files_in_shinyapp_tags.set(None)
