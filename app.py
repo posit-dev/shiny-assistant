@@ -67,7 +67,9 @@ switch_tag = ui.input_switch("language_switch", "R", False)
 switch_tag.attrs.update(
     {"style": "width: unset; display: inline-block; padding: 0 20px;"}
 )
-switch_tag.children[0].attrs.update({"style": "display: inline-block;"})
+switch_tag.children[0].attrs.update(  # pyright: ignore
+    {"style": "display: inline-block;"}
+)
 switch_tag.insert(0, ui.tags.span("Python ", style="padding-right: 0.3em;"))
 
 verbosity_tag = ui.input_select(
