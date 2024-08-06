@@ -58,4 +58,5 @@ just borrowed from the `:checked` state for switches.*/
 .assistant-shinyapp-file .filename {
   font-weight: bold;
   font-family: monospace;
+  margin-bottom: 0.2em;
 }
