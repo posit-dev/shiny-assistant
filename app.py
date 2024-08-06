@@ -83,6 +83,7 @@ gear_fill_icon = ui.HTML(
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
+        ui.div(class_="sidebar-resizer"),
         ui.div(
             switch_tag,
             verbosity_tag,
@@ -103,7 +104,7 @@ app_ui = ui.page_sidebar(
             ),
         ),
         ui.output_ui("run_button_ui"),
-        ui.chat_ui("chat", height="100%"),
+        ui.chat_ui("chat", height="100%", width="100%"),
         open="desktop",
         width=400,
         style="height: 100%;",
@@ -237,7 +238,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return ui.tags.iframe(
             id="shinylive-panel",
             src=url,
-            style="border: 1px solid black; flex: 1 1 auto;",
+            style="flex: 1 1 auto;",
             allow="clipboard-write",
         )
 

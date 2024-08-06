@@ -27,3 +27,26 @@ just borrowed from the `:checked` state for switches.*/
   --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
   background-color: var(--bs-blue);
 }
+
+.sidebar-resizer {
+  /* The resizer is a vertical bar on the right side of the sidebar. It's
+    hard-coded to set the appropriate CSS variable on the sidebar layout. */
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 3px;
+  cursor: ew-resize;
+  background-color: #e6e6e6;
+}
+
+.sidebar-collapsed .sidebar-resizer {
+  /* No resizer when the sidebar is collapsed */
+  display: none;
+}
+
+.sidebar-collapsed iframe {
+  /* When the resizer isn't visible, the iframe is missing a left border; add it
+     back like this */
+  border-left: 3px solid #e6e6e6;
+}

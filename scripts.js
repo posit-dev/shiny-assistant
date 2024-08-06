@@ -384,3 +384,41 @@ function decodeFromBase64(base64) {
   const decoder = new TextDecoder();
   return decoder.decode(uint8Array);
 }
+
+// =====================================================================================
+// Quick and dirty sidebar drag resize
+// =====================================================================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  const MIN_WIDTH = "10vw";
+  const MAX_WIDTH = "90vw";
+  const resizer = document.querySelector(".sidebar-resizer");
+
+  function updateLayout(leftWidth) {
+    document
+      .querySelector(".bslib-sidebar-layout")
+      .style.setProperty(
+        "--_sidebar-width",
+        `max(min(${leftWidth}px, ${MAX_WIDTH}), ${MIN_WIDTH})`
+      );
+  }
+
+  const handlePointerMove = (e) => {
+    const leftWidth = e.clientX;
+    updateLayout(leftWidth);
+  };
+
+  const handlePointerUp = (e) => {
+    resizer.releasePointerCapture(e.pointerId);
+    document.removeEventListener("pointermove", handlePointerMove);
+    document.removeEventListener("pointerup", handlePointerUp);
+  };
+
+  const handlePointerDown = (e) => {
+    resizer.setPointerCapture(e.pointerId);
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerUp);
+  };
+
+  resizer.addEventListener("pointerdown", handlePointerDown);
+});
