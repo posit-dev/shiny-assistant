@@ -1,3 +1,4 @@
 shiny @ git+https://github.com/posit-dev/py-shiny
 python-dotenv
 anthropic
+litellm
