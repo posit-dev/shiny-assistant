@@ -12,13 +12,17 @@
 
 .run-code-button {
   display: block;
-  position: absolute;
   top: 50px;
   left: 60px;
   border: 1px solid black;
   border-radius: 20px;
   padding: 3px 10px;
-  z-index: 10;
+}
+
+.run-code-button-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1em;
 }
 
 /* Make it so the switch doesn't change color when toggled. Note that the circle SVG is

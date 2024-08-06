@@ -1,134 +1,14 @@
+// =====================================================================================
+// Set up listener for messages from
+// =====================================================================================
+
 function chatMessagesContainer() {
   return document.getElementById("chat");
-}
-
-function sendVisiblePreBlockToWindow(filename) {
-  const text = getVisiblePreBlockText();
-  if (text === null) {
-    return;
-  }
-
-  sendFileContentToWindow(filename, text);
-}
-
-function getVisiblePreBlockText() {
-  const visibleBlocks = getVisiblePreBlocks(chatMessagesContainer());
-
-  if (visibleBlocks.length === 0) {
-    return null;
-  }
-
-  return visibleBlocks[0].textContent;
-}
-
-// Get all <pre> blocks in an element that are currently visible
-function getVisiblePreBlocks(el) {
-  if (!el) {
-    el = document;
-  }
-
-  const preBlocks = chatMessagesContainer().querySelectorAll("pre");
-
-  // Array to store visible code blocks
-  const visiblePreBlocks = [];
-
-  preBlocks.forEach((block) => {
-    if (isElementInViewport(block, chatMessagesContainer())) {
-      visiblePreBlocks.push(block);
-    }
-  });
-
-  return visiblePreBlocks;
-}
-
-// =====================================================================================
-// Functions for setting up button visibility based on visible code blocks
-// =====================================================================================
-
-function isElementInViewport(el, container) {
-  const rect = el.getBoundingClientRect();
-  const containerRect = container?.getBoundingClientRect() || {
-    top: 0,
-    bottom: window.innerHeight,
-  };
-
-  // Check if the block is visible within the viewport and its container
-  if (
-    rect.top < containerRect.bottom &&
-    rect.bottom > containerRect.top &&
-    rect.top < window.innerHeight &&
-    rect.bottom > 0 &&
-    rect.left < window.innerWidth &&
-    rect.right > 0
-  ) {
-    return true;
-  }
-  return false;
-}
-
-function updateConditionalButtonVisibility() {
-  const preBlocks = document.querySelectorAll("pre");
-  const visiblePreBlocks = [];
-
-  preBlocks.forEach((block) => {
-    if (isElementInViewport(block, chatMessagesContainer())) {
-      visiblePreBlocks.push(block);
-    }
-  });
-
-  button = document.getElementById("run_button_ui");
-  if (visiblePreBlocks.length > 0) {
-    button.classList.remove("hidden");
-  } else {
-    button.classList.add("hidden");
-  }
-}
-
-function throttle(func, limit) {
-  let inThrottle;
-  return function () {
-    const args = arguments;
-    const context = this;
-    if (!inThrottle) {
-      func.apply(context, args);
-      inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
-    }
-  };
 }
 
 // TODO: Replace this with Shiny.initializePromise when that lands in Shiny for Python
 $(document).on("shiny:sessioninitialized", function (event) {
   setTimeout(() => {
-    updateConditionalButtonVisibility();
-    const throttledUpdate = throttle(updateConditionalButtonVisibility, 100);
-
-    // Event listeners
-    window.addEventListener("scroll", throttledUpdate);
-    window.addEventListener("resize", throttledUpdate);
-
-    chatMessagesContainer().addEventListener("scroll", throttledUpdate);
-
-    // Use ResizeObserver for container resizing
-    const resizeObserver = new ResizeObserver(throttledUpdate);
-    resizeObserver.observe(chatMessagesContainer());
-
-    const mutationObserver = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === "childList") {
-          mutation.addedNodes.forEach((node) => {
-            if (node.tagName === "PRE") {
-              updateConditionalButtonVisibility();
-            }
-          });
-        }
-      });
-    });
-    mutationObserver.observe(chatMessagesContainer(), {
-      childList: true,
-      subtree: true,
-    });
-
     // When the user clicks on the send button, request the latest version of the files
     // from the shinylive iframe. This communication is async, so the file contents will
     // arrive later on the server side than the user chat message.
@@ -157,22 +37,22 @@ $(document).on("shiny:sessioninitialized", function (event) {
 // Functions for sending/requesting files from shinylive panel
 // =====================================================================================
 
-function sendFileContentToWindow(filename, msg) {
-  document.getElementById("shinylive-panel").contentWindow.postMessage(
-    {
-      type: "setFiles",
-      files: [
-        {
-          name: filename,
-          content: msg,
-          type: "text",
-        },
-      ],
-    },
-    "*"
-  );
-}
+// This should be called from a button inside of the .assistant-shinyapp div. It will
+// send the files inside of that div to the shinylive panel.
+function sendThisShinyappToWindow(buttonEl) {
+  const shinyappTag = buttonEl.closest(".assistant-shinyapp");
+  const fileTags = shinyappTag.querySelectorAll(".assistant-shinyapp-file");
 
+  const files = Array.from(fileTags).map((fileTag) => {
+    return {
+      name: fileTag.querySelector(".filename").innerText,
+      content: fileTag.querySelector("pre").textContent,
+      type: "text",
+    };
+  });
+
+  sendFileContentsToWindow(files);
+}
 function sendFileContentsToWindow(fileContents) {
   document.getElementById("shinylive-panel").contentWindow.postMessage(
     {
@@ -239,27 +119,6 @@ function setInputValue(inputId, value) {
   const binding = $(el).data("shiny-input-binding");
   binding.setValue(el, value);
   $(el).trigger("change");
-}
-
-// =====================================================================================
-// Misc utility functions
-// =====================================================================================
-
-function currentLanguage() {
-  const languageSwitch = document.getElementById("language_switch");
-  if (languageSwitch.checked) {
-    return "r";
-  } else {
-    return "python";
-  }
-}
-
-function currentLanguageExtension() {
-  if (currentLanguage() === "r") {
-    return "R";
-  } else {
-    return "py";
-  }
 }
 
 // =====================================================================================

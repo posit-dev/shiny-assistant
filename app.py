@@ -104,7 +104,6 @@ app_ui = ui.page_sidebar(
                 title="Advanced settings",
             ),
         ),
-        ui.output_ui("run_button_ui"),
         ui.chat_ui("chat", height="100%", width="100%"),
         open="desktop",
         width=400,
@@ -175,20 +174,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             verbosity=verbosity_instructions[input.verbosity()],
         )
         return prompt
-
-    @render.ui
-    def run_button_ui():
-        file_ext = language()
-        if file_ext == "python":
-            file_ext = "py"
-        elif file_ext == "r":
-            file_ext = "R"
-
-        return ui.tags.button(
-            "Run code block →",
-            class_="run-code-button btn btn-primary",
-            onclick=f"sendVisiblePreBlockToWindow('app.{file_ext}')",
-        )
 
     restored_messages: list[dict[str, str]] = []
 
@@ -317,7 +302,12 @@ does not ask you to modify the code, then ignore the code.
                 await reactive.flush()
 
         content = content.replace("<SHINYAPP>", "<div class='assistant-shinyapp'>\n")
-        content = content.replace("</SHINYAPP>", "\n</div>")
+        content = content.replace(
+            "</SHINYAPP>",
+            "\n<div class='run-code-button-container'>"
+            "<button class='run-code-button btn btn-outline-primary' onclick='sendThisShinyappToWindow(this)'>Run app →</button>"
+            "</div>\n</div>",
+        )
         content = re.sub(
             '\n<FILE NAME="(.*?)">',
             r"\n<div class='assistant-shinyapp-file'>\n<div class='filename'>\1</div>\n\n```",
