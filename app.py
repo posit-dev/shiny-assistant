@@ -20,8 +20,6 @@ load_dotenv()
 api_key = os.environ.get("ANTHROPIC_API_KEY")
 if api_key is None:
     raise ValueError("Please set the ANTHROPIC_API_KEY environment variable.")
-else:
-    llm = AsyncAnthropic(api_key=api_key)
 
 
 app_dir = Path(__file__).parent
@@ -75,9 +73,12 @@ switch_tag.insert(0, ui.tags.span("Python ", style="padding-right: 0.3em;"))
 verbosity_tag = ui.input_select(
     "verbosity", None, ["Code only", "Concise", "Verbose"], selected="Concise"
 )
-
 verbosity_tag.attrs.update(
     {"style": "width: unset; display: inline-block; padding: 0 20px;"}
+)
+
+gear_fill_icon = ui.HTML(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear-fill" viewBox="0 0 16 16"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/></svg>'
 )
 
 app_ui = ui.page_sidebar(
@@ -85,6 +86,21 @@ app_ui = ui.page_sidebar(
         ui.div(
             switch_tag,
             verbosity_tag,
+            ui.popover(
+                gear_fill_icon,
+                ui.div(
+                    ui.input_checkbox("use_api_key", "Use my own API key"),
+                    ui.panel_conditional(
+                        "input.use_api_key === true",
+                        ui.input_password(
+                            "api_key",
+                            None,
+                            placeholder="Anthropic API key",
+                        ),
+                    ),
+                ),
+                title="Advanced settings",
+            ),
         ),
         ui.output_ui("run_button_ui"),
         ui.chat_ui("chat", height="100%"),
@@ -129,6 +145,14 @@ app_ui = ui.page_sidebar(
 
 def server(input: Inputs, output: Outputs, session: Session):
     restoring = True
+
+    @reactive.calc
+    def llm():
+        if input.use_api_key():
+            return AsyncAnthropic(api_key=input.api_key())
+        else:
+            return AsyncAnthropic(api_key=api_key)
+        llm = AsyncAnthropic(api_key=api_key)
 
     @reactive.calc
     def app_prompt() -> str:
@@ -245,7 +269,7 @@ does not ask you to modify the code, then ignore the code.
 
         # Create a response message stream
         try:
-            response_stream = await llm.messages.create(
+            response_stream = await llm().messages.create(
                 model="claude-3-5-sonnet-20240620",
                 system=app_prompt(),
                 messages=messages,
