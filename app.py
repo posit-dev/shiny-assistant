@@ -9,10 +9,12 @@ from pathlib import Path
 from typing import Literal, TypedDict
 from urllib.parse import parse_qs
 
-from anthropic import AsyncAnthropic, AuthenticationError
+import litellm
 from app_utils import load_dotenv
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+
+litellm.set_verbose = True
 
 SHINYLIVE_BASE_URL = "https://shinylive.io/"
 
@@ -148,12 +150,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     restoring = True
 
     @reactive.calc
-    def llm():
+    def api_key():
         if input.use_api_key():
-            return AsyncAnthropic(api_key=input.api_key())
+            input.api_key()
         else:
-            return AsyncAnthropic(api_key=api_key)
-        llm = AsyncAnthropic(api_key=api_key)
+            return api_key
 
     @reactive.calc
     def app_prompt() -> str:
@@ -256,21 +257,34 @@ does not ask you to modify the code, then ignore the code.
 
         # Create a response message stream
         try:
-            response_stream = await llm().messages.create(
+            response_stream = await litellm.acompletion(
                 model="claude-3-5-sonnet-20240620",
-                system=app_prompt(),
-                messages=messages,
+                messages=[{"role": "system", "content": app_prompt()}, *messages],
                 stream=True,
                 max_tokens=3000,
             )
-        except AuthenticationError as e:
+        except Exception as e:
             await chat._raise_exception(e)
             return
 
         files_in_shinyapp_tags.set(None)
 
+        async def wrapped_stream():
+            async for chunk in response_stream:
+                if chunk.choices[0].delta.content:
+                    # print(chunk.choices[0].delta.content, end="")
+
+                    # Shiny doesn't yet support litellm, convert to dict instead
+                    chunk_dict = chunk.choices[0].delta.model_dump()
+                    # Anthropic API returns None for the role sometimes while streaming;
+                    # without the role, ui.Chat will render it but not perform the
+                    # transforms we need
+                    if chunk_dict["role"] is None:
+                        chunk_dict["role"] = "assistant"
+                    yield chunk_dict
+
         # Append the response stream into the chat
-        await chat.append_message_stream(response_stream)
+        await chat.append_message_stream(wrapped_stream())
 
     # ==================================================================================
     # Code for finding content in the <SHINYAPP> tags and sending to the client
@@ -347,7 +361,6 @@ does not ask you to modify the code, then ignore the code.
 
         with reactive.isolate():
             messages = chat.messages(
-                format="anthropic",
                 token_limits=None,
                 transform_user="all",
                 transform_assistant=False,
