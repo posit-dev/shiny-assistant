@@ -50,3 +50,8 @@ just borrowed from the `:checked` state for switches.*/
      back like this */
   border-left: 3px solid #e6e6e6;
 }
+
+.assistant-shinyapp-file .filename {
+  font-weight: bold;
+  font-family: monospace;
+}

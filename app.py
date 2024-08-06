@@ -316,10 +316,14 @@ does not ask you to modify the code, then ignore the code.
 
                 await reactive.flush()
 
-        content = content.replace("\n<SHINYAPP>", "")
-        content = content.replace("\n</SHINYAPP>", "")
-        content = re.sub('\n<FILE NAME="(.*?)">', r"\n```\n## file: \1\n", content)
-        content = content.replace("\n</FILE>", "\n```")
+        content = content.replace("<SHINYAPP>", "<div class='assistant-shinyapp'>\n")
+        content = content.replace("</SHINYAPP>", "\n</div>")
+        content = re.sub(
+            '\n<FILE NAME="(.*?)">',
+            r"\n<div class='assistant-shinyapp-file'>\n<div class='filename'>\1</div>\n\n```",
+            content,
+        )
+        content = content.replace("\n</FILE>", "\n```\n</div>")
 
         return content
 
