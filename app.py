@@ -50,6 +50,7 @@ Here are some examples:
 - "How do I add a plot to an application?"
 - "Create an app that demonstrates a linear regression."
 - "Show me how make it so a table will update only after a button is clicked."
+- Copy and paste your existing Shiny code into the code editor and then ask me to make changes to it.
 
 Let's get started! 🚀
 """
