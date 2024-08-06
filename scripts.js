@@ -356,10 +356,10 @@ async function restoreFileContents() {
   const files = JSON.parse(
     decodeFromBase64(decodeURIComponent(params.get("files")))
   );
-  files.forEach((file) => {
-    console.log("Restoring file content:", file.name);
-    sendFileContentToWindow(file.name, file.content);
-  });
+  if (files.length > 0) {
+    console.log(`Restoring ${files.length} file(s)`);
+  }
+  sendFileContentsToWindow(files);
   window.location.hash = "";
 }
 restoreFileContents().catch((err) => {
