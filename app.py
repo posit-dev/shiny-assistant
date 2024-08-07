@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Literal, TypedDict, cast
 from urllib.parse import parse_qs
 
-from anthropic import AsyncAnthropic, AuthenticationError
+from anthropic import AsyncAnthropic
 from app_utils import load_dotenv
 from htmltools import Tag
 
