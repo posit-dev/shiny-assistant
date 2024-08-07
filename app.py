@@ -328,12 +328,15 @@ does not ask you to modify the code, then ignore the code.
                     if '<SHINYAPP AUTORUN="1">' in content:
                         shinylive_panel_visible.set(True)
 
-                    # The first time we see the </SHINYAPP> tag, set the files.
-                    if files_in_shinyapp_tags() is None and "</SHINYAPP>" in content:
-                        files = shinyapp_tag_contents_to_filecontents(content)
-                        files_in_shinyapp_tags.set(files)
+                        # The first time we see the </SHINYAPP> tag, set the files.
+                        if (
+                            files_in_shinyapp_tags() is None
+                            and "</SHINYAPP>" in content
+                        ):
+                            files = shinyapp_tag_contents_to_filecontents(content)
+                            files_in_shinyapp_tags.set(files)
 
-                await reactive.flush()
+                        await reactive.flush()
 
         content = re.sub(
             '<SHINYAPP AUTORUN="[01]">', "<div class='assistant-shinyapp'>\n", content

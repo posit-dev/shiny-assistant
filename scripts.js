@@ -28,8 +28,17 @@ $(document).on("shiny:sessioninitialized", function (event) {
 
     // Receive custom message with app code and send to the shinylive panel.
     Shiny.addCustomMessageHandler("set-shinylive-content", async (message) => {
-      await ensureShinylivePanel();
-      sendFileContentsToWindow(message.files);
+      // It's critical that we NOT await ensureShinylivePanel from within async
+      // custom message handlers. You will get hangs because
+      // ensureShinylivePanel will not resolve until the shinylive panel is
+      // ready, but for that to happen, a new custom message must be sent from
+      // the server back to the client, which will not be handled because the
+      // await holds up the message handler loop.
+      //
+      // Instead, we handle the promise without awaiting it directly.
+      ensureShinylivePanel().then(() => {
+        sendFileContentsToWindow(message.files);
+      });
     });
 
     // Receive custom message to show the shinylive panel
