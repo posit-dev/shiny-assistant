@@ -284,7 +284,7 @@ does not ask you to modify the code, then ignore the code.
                 stream=True,
                 max_tokens=3000,
             )
-        except AuthenticationError as e:
+        except Exception as e:
             await chat._raise_exception(e)
             return
 
