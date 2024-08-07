@@ -32,7 +32,19 @@ just borrowed from the `:checked` state for switches.*/
   background-color: var(--bs-blue);
 }
 
-.bslib-sidebar-layout.chat-full-width shiny-chat-container {
+.bslib-sidebar-layout.chat-full-width {
+  --_sidebar-width: 100% !important;
+}
+
+.bslib-sidebar-layout.chat-full-width > .sidebar {
+  grid-column: 1 / 3;
+}
+
+.bslib-sidebar-layout.chat-full-width > .collapse-toggle {
+  display: none;
+}
+
+.bslib-sidebar-layout.chat-full-width > .sidebar shiny-chat-container {
   border: 1px solid #ccc;
   border-radius: 8px;
   padding: 10px;

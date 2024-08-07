@@ -102,7 +102,7 @@ app_ui = ui.page_sidebar(
         ),
         ui.chat_ui("chat", height="100%"),
         open="desktop",
-        width="100%",
+        width="400px",
         style="height: 100%;",
         gap="3px",
         padding="3px",

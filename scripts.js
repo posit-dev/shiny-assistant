@@ -188,15 +188,23 @@ $(document).on("shiny:disconnected", async () => {
 
   try {
     // If we successfully get the code from the shinylive panel, we'll add that
-    // to the hash as well.
-    const fileContents = await requestFileContentsFromWindow();
-    hash +=
-      "&files=" +
-      encodeURIComponent(encodeToBase64(JSON.stringify(fileContents.files)));
-    window.location.hash = hash;
+    // to the hash as well. The shinylive panel may not exist, as it doesn't get
+    // created until the assistant generates some code.
+    if (document.getElementById("shinylive-panel")) {
+      const fileContents = await requestFileContentsFromWindow();
+      hash +=
+        "&files=" +
+        encodeURIComponent(encodeToBase64(JSON.stringify(fileContents.files)));
+    }
   } catch (e) {
     console.error("Failed to get file contents from shinylive panel", e);
   }
+
+  if (explicitLeftWidth !== null) {
+    hash += `&leftWidth=${explicitLeftWidth}`;
+  }
+
+  window.location.hash = hash;
 
   // Now that we're done updating the hash, we can show the reconnect modal to
   // encourage the user to reconnect.
@@ -217,32 +225,56 @@ const shinyliveReadyPromise = new Promise((resolve) => {
   });
 });
 
+const domContentLoadedPromise = new Promise((resolve) => {
+  document.addEventListener("DOMContentLoaded", resolve);
+});
+
+const shinyConnectedPromise = new Promise((resolve) => {
+  $(document).on("shiny:connected", resolve);
+});
+
+// Drop "#" from hash
+let hash = window.location.hash?.replace(/^#/, "");
+const params = new URLSearchParams(hash || "");
+
 // Now restore shinylive file contents from window.location.hash, if any. (We
 // don't need to worry about restoring the chat history here; that's being
 // handled by the server, which always has access to the initial value of
 // window.location.hash.)
 async function restoreFileContents() {
-  // Drop "#" from hash
-  let hash = window.location.hash?.replace(/^#/, "");
-  if (!hash) {
-    return;
+  if (params.has("files") && params.get("files")) {
+    const files = JSON.parse(
+      decodeFromBase64(decodeURIComponent(params.get("files")))
+    );
+    // Wait for shinylive to come online
+    await shinyliveReadyPromise;
+    if (files.length > 0) {
+      console.log(`Restoring ${files.length} file(s)`);
+    }
+    sendFileContentsToWindow(files);
   }
-  const params = new URLSearchParams(hash);
-  if (!params.has("files")) {
-    return;
+}
+
+async function restoreSidebarSize() {
+  await domContentLoadedPromise;
+  if (params.has("leftWidth")) {
+    const leftWidth = parseInt(params.get("leftWidth"));
+    updateLayout(leftWidth);
   }
-  // Wait for shinylive to come online
-  await shinyliveReadyPromise;
-  const files = JSON.parse(
-    decodeFromBase64(decodeURIComponent(params.get("files")))
-  );
-  if (files.length > 0) {
-    console.log(`Restoring ${files.length} file(s)`);
-  }
-  sendFileContentsToWindow(files);
+}
+
+async function restore() {
+  await Promise.all([
+    restoreFileContents(),
+    restoreSidebarSize(),
+    // Wait for shiny to connect before clearing the hash, otherwise the
+    // server won't have the chat history when it needs it
+    shinyConnectedPromise,
+  ]);
   window.location.hash = "";
 }
-restoreFileContents().catch((err) => {
+
+restore().catch((err) => {
   console.error("Failed to restore", err);
 });
 
@@ -269,19 +301,22 @@ function decodeFromBase64(base64) {
 // Quick and dirty sidebar drag resize
 // =====================================================================================
 
-document.addEventListener("DOMContentLoaded", () => {
-  const MIN_WIDTH = "10vw";
-  const MAX_WIDTH = "90vw";
-  const resizer = document.querySelector(".sidebar-resizer");
+const MIN_WIDTH = "10vw";
+const MAX_WIDTH = "90vw";
+let explicitLeftWidth = null;
 
-  function updateLayout(leftWidth) {
-    document
-      .querySelector(".bslib-sidebar-layout")
-      .style.setProperty(
-        "--_sidebar-width",
-        `max(min(${leftWidth}px, ${MAX_WIDTH}), ${MIN_WIDTH})`
-      );
-  }
+function updateLayout(leftWidth) {
+  document
+    .querySelector(".bslib-sidebar-layout")
+    .style.setProperty(
+      "--_sidebar-width",
+      `max(min(${leftWidth}px, ${MAX_WIDTH}), ${MIN_WIDTH})`
+    );
+  explicitLeftWidth = leftWidth;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const resizer = document.querySelector(".sidebar-resizer");
 
   const handlePointerMove = (e) => {
     const leftWidth = e.clientX;
@@ -314,7 +349,7 @@ function showShinylivePanel(smooth) {
     }, 500);
   }
 
-  document
-    .querySelector(".bslib-sidebar-layout")
-    .style.setProperty("--_sidebar-width", "400px");
+  // document
+  //   .querySelector(".bslib-sidebar-layout")
+  //   .style.setProperty("--_sidebar-width", defaultSidebarWidth);
 }
