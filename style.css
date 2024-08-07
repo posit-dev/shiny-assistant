@@ -32,8 +32,15 @@ just borrowed from the `:checked` state for switches.*/
   background-color: var(--bs-blue);
 }
 
-.bslib-sidebar-layout.main.main-hidden {
-  display: none;
+.bslib-sidebar-layout.chat-full-width shiny-chat-container {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  transition: border 0.4s ease;
+}
+
+.bslib-sidebar-layout.chat-full-width .main {
+  visibility: hidden;
 }
 
 .sidebar-resizer {

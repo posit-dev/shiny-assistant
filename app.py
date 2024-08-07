@@ -6,13 +6,15 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, cast
 from urllib.parse import parse_qs
 
 from anthropic import AsyncAnthropic, AuthenticationError
 from app_utils import load_dotenv
+from htmltools import Tag
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny.ui._card import CardItem
 
 SHINYLIVE_BASE_URL = "https://shinylive.io/"
 
@@ -139,7 +141,16 @@ app_ui = ui.page_sidebar(
     fillable=True,
 )
 
-app_ui.children[1].add_class("main-hidden")  # pyright: ignore
+
+for child in app_ui.children:
+    if isinstance(child, Tag) and child.has_class("bslib-page-sidebar"):
+        for child in child.children:
+            if isinstance(child, CardItem) and cast(Tag, child._item).has_class(
+                "bslib-sidebar-layout"
+            ):
+                cast(Tag, child._item).add_class("chat-full-width")
+                break
+        break
 
 
 def server(input: Inputs, output: Outputs, session: Session):
