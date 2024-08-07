@@ -297,6 +297,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function showShinylivePanel(smooth) {
+  document.querySelector(".bslib-page-sidebar").classList.remove("main-hidden");
+
   const el = document.querySelector(".bslib-sidebar-layout");
   if (smooth) {
     el.classList.add("sidebar-smooth-transition");

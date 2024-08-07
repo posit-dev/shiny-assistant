@@ -63,20 +63,14 @@ class FileContent(TypedDict):
 
 
 switch_tag = ui.input_switch("language_switch", "R", False)
-switch_tag.attrs.update(
-    {"style": "width: unset; display: inline-block; padding: 0 20px;"}
-)
-switch_tag.children[0].attrs.update(  # pyright: ignore
-    {"style": "display: inline-block;"}
-)
+switch_tag.add_style("width: unset; display: inline-block; padding: 0 20px;")
+switch_tag.children[0].add_style("display: inline-block;")  # pyright: ignore
 switch_tag.insert(0, ui.tags.span("Python ", style="padding-right: 0.3em;"))
 
 verbosity_tag = ui.input_select(
     "verbosity", None, ["Code only", "Concise", "Verbose"], selected="Concise"
 )
-verbosity_tag.attrs.update(
-    {"style": "width: unset; display: inline-block; padding: 0 20px;"}
-)
+verbosity_tag.add_style("width: unset; display: inline-block; padding: 0 20px;")
 
 gear_fill_icon = ui.HTML(
     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear-fill" viewBox="0 0 16 16"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/></svg>'
@@ -111,8 +105,10 @@ app_ui = ui.page_sidebar(
         gap="3px",
         padding="3px",
     ),
-    ui.tags.script(read_file("scripts.js")),
-    ui.head_content(ui.tags.style(read_file("style.css"))),
+    ui.head_content(
+        ui.tags.style(read_file("style.css")),
+        ui.tags.script(read_file("scripts.js")),
+    ),
     ui.output_ui("shinylive_iframe"),
     ui.tags.template(
         ui.modal(
@@ -142,6 +138,8 @@ app_ui = ui.page_sidebar(
     ),
     fillable=True,
 )
+
+app_ui.children[1].add_class("main-hidden")  # pyright: ignore
 
 
 def server(input: Inputs, output: Outputs, session: Session):

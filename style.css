@@ -32,6 +32,10 @@ just borrowed from the `:checked` state for switches.*/
   background-color: var(--bs-blue);
 }
 
+.bslib-sidebar-layout.main.main-hidden {
+  display: none;
+}
+
 .sidebar-resizer {
   /* The resizer is a vertical bar on the right side of the sidebar. It's
     hard-coded to set the appropriate CSS variable on the sidebar layout. */
