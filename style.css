@@ -44,6 +44,17 @@ just borrowed from the `:checked` state for switches.*/
   background-color: #e6e6e6;
 }
 
+/* This is needed for smooth transitions with complex values. */
+@property --_sidebar-width {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+.sidebar-smooth-transition {
+  transition: --_sidebar-width 0.4s ease;
+}
+
 .sidebar-collapsed .sidebar-resizer {
   /* No resizer when the sidebar is collapsed */
   display: none;

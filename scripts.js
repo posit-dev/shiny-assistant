@@ -1,5 +1,5 @@
 // =====================================================================================
-// Set up listener for messages from
+// Set up listeners for messages from server
 // =====================================================================================
 
 function chatMessagesContainer() {
@@ -27,8 +27,16 @@ $(document).on("shiny:sessioninitialized", function (event) {
     );
 
     // Receive custom message with app code and send to the shinylive panel.
-    Shiny.addCustomMessageHandler("set-shinylive-content", function (message) {
+    Shiny.addCustomMessageHandler("set-shinylive-content", async (message) => {
+      // await shinyliveReadyPromise;
       sendFileContentsToWindow(message.files);
+    });
+
+    // Receive custom message to show the shinylive panel
+    Shiny.addCustomMessageHandler("show-shinylive-panel", (message) => {
+      if (message.show === true) {
+        showShinylivePanel();
+      }
     });
   }, 100);
 });
@@ -53,6 +61,7 @@ function sendThisShinyappToWindow(buttonEl) {
 
   sendFileContentsToWindow(files);
 }
+
 function sendFileContentsToWindow(fileContents) {
   document.getElementById("shinylive-panel").contentWindow.postMessage(
     {
@@ -64,6 +73,11 @@ function sendFileContentsToWindow(fileContents) {
 }
 
 async function requestFileContentsFromWindow() {
+  const shinylivePanel = document.getElementById("shinylive-panel");
+  if (shinylivePanel === null) {
+    return [];
+  }
+
   const reply = await postMessageAndWaitForReply(
     document.getElementById("shinylive-panel").contentWindow,
     { type: "getFiles" }
@@ -82,6 +96,18 @@ function postMessageAndWaitForReply(targetWindow, message) {
 
     targetWindow.postMessage(message, "*", [channel.port2]);
   });
+}
+
+function showShinylivePanel() {
+  const el = document.querySelector(".bslib-sidebar-layout");
+  el.classList.add("sidebar-smooth-transition");
+  setTimeout(() => {
+    el.classList.remove("sidebar-smooth-transition");
+  }, 500);
+
+  document
+    .querySelector(".bslib-sidebar-layout")
+    .style.setProperty("--_sidebar-width", "400px");
 }
 
 // =====================================================================================

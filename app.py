@@ -104,9 +104,9 @@ app_ui = ui.page_sidebar(
                 title="Advanced settings",
             ),
         ),
-        ui.chat_ui("chat", height="100%", width="100%"),
+        ui.chat_ui("chat", height="100%"),
         open="desktop",
-        width=400,
+        width="100%",
         style="height: 100%;",
         gap="3px",
         padding="3px",
@@ -146,6 +146,8 @@ app_ui = ui.page_sidebar(
 
 def server(input: Inputs, output: Outputs, session: Session):
     restoring = True
+
+    shinylive_panel_visible = reactive.value(False)
 
     @reactive.calc
     def llm():
@@ -210,6 +212,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.ui
     def shinylive_iframe():
+        if not shinylive_panel_visible():
+            return
+
         if language() == "python":
             url = (
                 SHINYLIVE_BASE_URL
@@ -294,7 +299,12 @@ does not ask you to modify the code, then ignore the code.
         if chunk != "":
             async with reactive.lock():
                 with reactive.isolate():
-                    # The first time we see the </SHINYAPP> tag, set the
+                    # If we see the <SHINYAPP> tag, make sure the shinylive panel is
+                    # visible.
+                    if "<SHINYAPP>" in content:
+                        shinylive_panel_visible.set(True)
+
+                    # The first time we see the </SHINYAPP> tag, set the files.
                     if files_in_shinyapp_tags() is None and "</SHINYAPP>" in content:
                         files = shinyapp_tag_contents_to_filecontents(content)
                         files_in_shinyapp_tags.set(files)
@@ -329,6 +339,11 @@ does not ask you to modify the code, then ignore the code.
         await session.send_custom_message(
             "set-shinylive-content", {"files": files_in_shinyapp_tags()}
         )
+
+    @reactive.effect
+    async def send_show_shinylive_panel_message():
+        if shinylive_panel_visible():
+            await session.send_custom_message("show-shinylive-panel", {"show": True})
 
     # ==================================================================================
     # Misc utility functions
