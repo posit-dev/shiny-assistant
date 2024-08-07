@@ -45,9 +45,55 @@ just borrowed from the `:checked` state for switches.*/
 }
 
 .bslib-sidebar-layout.chat-full-width > .sidebar shiny-chat-container {
-  padding: 10px;
+  padding: 16px;
   height: auto !important;
   max-height: 100%;
+
+  /* .card */
+  --bs-card-spacer-y: 1rem;
+  --bs-card-spacer-x: 1rem;
+  --bs-card-title-spacer-y: 0.5rem;
+  --bs-card-title-color: ;
+  --bs-card-subtitle-color: ;
+  --bs-card-border-width: var(--bs-border-width);
+  --bs-card-border-color: var(--bs-border-color-translucent);
+  --bs-card-border-radius: 8px;
+  --bs-card-box-shadow: ;
+  --bs-card-inner-border-radius: calc(8px - (var(--bs-border-width)));
+  --bs-card-cap-padding-y: 0.5rem;
+  --bs-card-cap-padding-x: 1rem;
+  --bs-card-cap-bg: rgba(var(--bs-body-color-rgb), 0.03);
+  --bs-card-cap-color: ;
+  --bs-card-height: ;
+  --bs-card-color: ;
+  --bs-card-bg: var(--bs-body-bg);
+  --bs-card-img-overlay-padding: 1rem;
+  --bs-card-group-margin: 0.75rem;
+  position: relative;
+  display: flex;
+  display: -webkit-flex;
+  flex-direction: column;
+  -webkit-flex-direction: column;
+  min-width: 0;
+  height: var(--bs-card-height);
+  color: var(--bs-body-color);
+  word-wrap: break-word;
+  background-color: var(--bs-card-bg);
+  background-clip: border-box;
+  border: var(--bs-card-border-width) solid var(--bs-card-border-color);
+  border-radius: var(--bs-card-border-radius);
+
+  /* .bslib-card */
+  box-shadow: var(
+    --bslib-card-box-shadow,
+    0px 0px 2px 0px RGBA(var(--bslib-box-shadow-color-rgb), 0.14),
+    0px 2px 4px 0px RGBA(var(--bslib-box-shadow-color-rgb), 0.16)
+  );
+  border-color: var(--bslib-card-border-color, transparent);
+}
+
+.bslib-sidebar-layout.chat-full-width > .sidebar shiny-chat-input {
+  margin-top: 1em;
 }
 
 .bslib-sidebar-layout.chat-full-width .main {
