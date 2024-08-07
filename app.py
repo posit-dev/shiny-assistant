@@ -211,11 +211,9 @@ def server(input: Inputs, output: Outputs, session: Session):
     if len(restored_messages) == 0:
         restored_messages.insert(0, {"role": "assistant", "content": greeting})
 
-    for message in restored_messages:
-        if "<SHINYAPP>" in message["content"]:
-            shinylive_panel_visible_smooth_transition.set(False)
-            shinylive_panel_visible.set(True)
-            break
+    if "files" in parsed_qs and parsed_qs["files"]:
+        shinylive_panel_visible_smooth_transition.set(False)
+        shinylive_panel_visible.set(True)
 
     chat = ui.Chat(
         "chat",
@@ -290,8 +288,18 @@ does not ask you to modify the code, then ignore the code.
 
         files_in_shinyapp_tags.set(None)
 
+        async def logging_stream_wrapper():
+            async for chunk in response_stream:
+                if (
+                    chunk.type == "content_block_delta"
+                    and chunk.delta.type == "text_delta"
+                ):
+                    print(chunk.delta.text, end="")
+                yield chunk
+            print("")
+
         # Append the response stream into the chat
-        await chat.append_message_stream(response_stream)
+        await chat.append_message_stream(logging_stream_wrapper())
 
     # ==================================================================================
     # Code for finding content in the <SHINYAPP> tags and sending to the client
@@ -317,7 +325,7 @@ does not ask you to modify the code, then ignore the code.
                 with reactive.isolate():
                     # If we see the <SHINYAPP> tag, make sure the shinylive panel is
                     # visible.
-                    if "<SHINYAPP>" in content:
+                    if '<SHINYAPP AUTORUN="1">' in content:
                         shinylive_panel_visible.set(True)
 
                     # The first time we see the </SHINYAPP> tag, set the files.
@@ -327,7 +335,9 @@ does not ask you to modify the code, then ignore the code.
 
                 await reactive.flush()
 
-        content = content.replace("<SHINYAPP>", "<div class='assistant-shinyapp'>\n")
+        content = re.sub(
+            '<SHINYAPP AUTORUN="[01]">', "<div class='assistant-shinyapp'>\n", content
+        )
         content = content.replace(
             "</SHINYAPP>",
             "\n<div class='run-code-button-container'>"
@@ -355,6 +365,16 @@ does not ask you to modify the code, then ignore the code.
         await session.send_custom_message(
             "set-shinylive-content", {"files": files_in_shinyapp_tags()}
         )
+
+    @reactive.effect
+    @reactive.event(input.show_shinylive)
+    async def force_shinylive_open():
+        # This is the client telling the server to show the shinylive panel.
+        # This is currently necessary (rather than the client having total
+        # control) because the server uses a render.ui to create the shinylive
+        # iframe.
+        if not shinylive_panel_visible():
+            shinylive_panel_visible.set(True)
 
     @reactive.effect
     @reactive.event(shinylive_panel_visible)
@@ -407,7 +427,7 @@ def shinyapp_tag_contents_to_filecontents(input: str) -> list[FileContent]:
     """
     # Keep the text between the SHINYAPP tags
     shinyapp_code = re.sub(
-        r".*<SHINYAPP>(.*)</SHINYAPP>.*",
+        r".*<SHINYAPP AUTORUN=\"[01]\">(.*)</SHINYAPP>.*",
         r"\1",
         input,
         flags=re.DOTALL,

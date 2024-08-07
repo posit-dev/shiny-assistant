@@ -28,7 +28,7 @@ $(document).on("shiny:sessioninitialized", function (event) {
 
     // Receive custom message with app code and send to the shinylive panel.
     Shiny.addCustomMessageHandler("set-shinylive-content", async (message) => {
-      // await shinyliveReadyPromise;
+      await ensureShinylivePanel();
       sendFileContentsToWindow(message.files);
     });
 
@@ -42,8 +42,9 @@ $(document).on("shiny:sessioninitialized", function (event) {
 });
 
 // Listener for "Run code" buttons.
-document.addEventListener("click", (e) => {
+document.addEventListener("click", async (e) => {
   if (e.target.matches(".run-code-button")) {
+    await ensureShinylivePanel();
     sendThisShinyappToWindow(e.target);
   }
 });
@@ -337,6 +338,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   resizer.addEventListener("pointerdown", handlePointerDown);
 });
+
+/**
+ * Call from anywhere to ensure that the shinylive panel is shown and ready.
+ */
+async function ensureShinylivePanel() {
+  Shiny.setInputValue("show_shinylive", true);
+  await shinyliveReadyPromise;
+}
 
 function showShinylivePanel(smooth) {
   const el = document.querySelector(".bslib-sidebar-layout");
