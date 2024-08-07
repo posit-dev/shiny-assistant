@@ -320,7 +320,7 @@ does not ask you to modify the code, then ignore the code.
         content = content.replace(
             "</SHINYAPP>",
             "\n<div class='run-code-button-container'>"
-            "<button class='run-code-button btn btn-outline-primary' onclick='sendThisShinyappToWindow(this)'>Run app →</button>"
+            "<button class='run-code-button btn btn-outline-primary'>Run app →</button>"
             "</div>\n</div>",
         )
         content = re.sub(

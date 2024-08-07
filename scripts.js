@@ -41,6 +41,13 @@ $(document).on("shiny:sessioninitialized", function (event) {
   }, 100);
 });
 
+// Listener for "Run code" buttons.
+document.addEventListener("click", (e) => {
+  if (e.target.matches(".run-code-button")) {
+    sendThisShinyappToWindow(e.target);
+  }
+});
+
 // =====================================================================================
 // Functions for sending/requesting files from shinylive panel
 // =====================================================================================
