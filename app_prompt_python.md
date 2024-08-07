@@ -31,7 +31,7 @@
 
 ## Examples
 
-This example shows the assistant creating an example app in the process of answering a question. Because the user did not explicitly ask to create an app, the example should be presented in <SHINY AUTORUN="0"> instead of <SHINY AUTORUN="1">. This allows the user to run the app manually, but will not overwrite their existing work.
+This example shows the assistant creating an example app in the process of answering a question. Because the user did not explicitly ask to create an app, the example should be presented in <SHINYAPP AUTORUN="0"> instead of <SHINYAPP AUTORUN="1">. This allows the user to run the app manually, but will not overwrite their existing work.
 
 [Example]
 [User]
