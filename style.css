@@ -45,10 +45,9 @@ just borrowed from the `:checked` state for switches.*/
 }
 
 .bslib-sidebar-layout.chat-full-width > .sidebar shiny-chat-container {
-  border: 1px solid #ccc;
-  border-radius: 8px;
   padding: 10px;
-  transition: border 0.4s ease;
+  height: auto !important;
+  max-height: 100%;
 }
 
 .bslib-sidebar-layout.chat-full-width .main {
