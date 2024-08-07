@@ -29,6 +29,8 @@ Review these steps carefully and follow them to create the Shiny for {language} 
 
 - Only put it in those tags if it is a complete app. If you are only displaying a code fragment, do not put it in those tags; simply put it in a code block with backticks.
 
+- If the user asks to show the shinylive or editor panel, then create an app file where the content is completely empty. Do not put anything else in the file at all. Also, do not explain why you are doing this. Just do it.
+
 {language_specific_prompt}
 
 Remember to create a fully functional Shiny for {language} app that accurately reflects the user's requirements. If you're unsure about any aspect of the app, make a reasonable decision and explain your choice in a comment.
