@@ -148,6 +148,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     restoring = True
 
     shinylive_panel_visible = reactive.value(False)
+    shinylive_panel_visible_smooth_transition = reactive.value(True)
 
     @reactive.calc
     def llm():
@@ -200,6 +201,12 @@ def server(input: Inputs, output: Outputs, session: Session):
     # Add a starting message, but only if no messages were restored.
     if len(restored_messages) == 0:
         restored_messages.insert(0, {"role": "assistant", "content": greeting})
+
+    for message in restored_messages:
+        if "<SHINYAPP>" in message["content"]:
+            shinylive_panel_visible_smooth_transition.set(False)
+            shinylive_panel_visible.set(True)
+            break
 
     chat = ui.Chat(
         "chat",
@@ -341,9 +348,16 @@ does not ask you to modify the code, then ignore the code.
         )
 
     @reactive.effect
+    @reactive.event(shinylive_panel_visible)
     async def send_show_shinylive_panel_message():
         if shinylive_panel_visible():
-            await session.send_custom_message("show-shinylive-panel", {"show": True})
+            await session.send_custom_message(
+                "show-shinylive-panel",
+                {
+                    "show": True,
+                    "smooth": shinylive_panel_visible_smooth_transition(),
+                },
+            )
 
     # ==================================================================================
     # Misc utility functions

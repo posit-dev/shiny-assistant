@@ -35,7 +35,7 @@ $(document).on("shiny:sessioninitialized", function (event) {
     // Receive custom message to show the shinylive panel
     Shiny.addCustomMessageHandler("show-shinylive-panel", (message) => {
       if (message.show === true) {
-        showShinylivePanel();
+        showShinylivePanel(message.smooth);
       }
     });
   }, 100);
@@ -96,18 +96,6 @@ function postMessageAndWaitForReply(targetWindow, message) {
 
     targetWindow.postMessage(message, "*", [channel.port2]);
   });
-}
-
-function showShinylivePanel() {
-  const el = document.querySelector(".bslib-sidebar-layout");
-  el.classList.add("sidebar-smooth-transition");
-  setTimeout(() => {
-    el.classList.remove("sidebar-smooth-transition");
-  }, 500);
-
-  document
-    .querySelector(".bslib-sidebar-layout")
-    .style.setProperty("--_sidebar-width", "400px");
 }
 
 // =====================================================================================
@@ -307,3 +295,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   resizer.addEventListener("pointerdown", handlePointerDown);
 });
+
+function showShinylivePanel(smooth) {
+  const el = document.querySelector(".bslib-sidebar-layout");
+  if (smooth) {
+    el.classList.add("sidebar-smooth-transition");
+    setTimeout(() => {
+      el.classList.remove("sidebar-smooth-transition");
+    }, 500);
+  }
+
+  document
+    .querySelector(".bslib-sidebar-layout")
+    .style.setProperty("--_sidebar-width", "400px");
+}
