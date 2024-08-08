@@ -1,17 +1,20 @@
 import hmac
 import json
 import os
+
+import dotenv
+import markdown
+import requests
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-import requests
-import dotenv
 
 script_dir = os.path.dirname(__file__)
 parent_dir = os.path.dirname(script_dir)
 token_json_path = os.path.join(script_dir, "token.json")
+template_path = os.path.join(script_dir, "template.md")
 dotenv.load_dotenv(os.path.join(parent_dir, ".env"))
 
 # Mailgun configuration
@@ -64,8 +67,28 @@ def get_google_sheet_service():
     return build("sheets", "v4", credentials=creds)
 
 
+def read_email_template():
+    try:
+        with open(template_path, "r") as file:
+            markdown_content = file.read()
+        html_content = markdown.markdown(markdown_content)
+        return html_content
+    except FileNotFoundError:
+        print(f"Error: template.md not found in {script_dir}")
+        return None
+    except Exception as e:
+        print(f"Error reading template file: {str(e)}")
+        return None
+
+
 def send_bulk_emails(recipients):
     successful_emails = []
+
+    # Read email template
+    html_content = read_email_template()
+    if not html_content:
+        print("Failed to read email template. Aborting email send.")
+        return successful_emails
 
     # Prepare the recipient variables
     recipient_variables = {
@@ -84,7 +107,7 @@ def send_bulk_emails(recipients):
                 "from": MAILGUN_FROM_EMAIL,
                 "to": [recipient["email"] for recipient in recipients],
                 "subject": "Your Shiny Assistant invitation is here",
-                "html": "<strong>Hello %recipient.name%,</strong><br>Here's your link to Shiny Assistant. You will need to use this link every time.<br><br><a href=\"%recipient.url%\">%recipient.url%</a><br><br>Please don't share it with other people. Thanks, and hope you enjoy Shiny Assistant!<br><br>The Shiny Team",
+                "html": html_content,
                 "recipient-variables": json.dumps(recipient_variables),
             },
         )
