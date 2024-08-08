@@ -71,10 +71,10 @@ class FileContent(TypedDict):
     type: Literal["text", "binary"]
 
 
-switch_tag = ui.input_switch("language_switch", "R", False)
+switch_tag = ui.input_switch("language_switch", "Python", False)
 switch_tag.add_style("width: unset; display: inline-block; padding: 0 20px;")
 switch_tag.children[0].add_style("display: inline-block;")  # pyright: ignore
-switch_tag.insert(0, ui.tags.span("Python ", style="padding-right: 0.3em;"))
+switch_tag.insert(0, ui.tags.span("R ", style="padding-right: 0.3em;"))
 
 verbosity_tag = ui.input_select(
     "verbosity", None, ["Code only", "Concise", "Verbose"], selected="Concise"
@@ -331,7 +331,7 @@ does not ask you to modify the code, then ignore the code.
             await chat.append_message(
                 {
                     "role": "assistant",
-                    "content": "**Error:** Shiny Assistant has exceeded its rate limit. Please try again later.",
+                    "content": "**Error:** Shiny Assistant has exceeded its Anthropic rate limit. Please try again later, or provide your own Anthropic API key using the gear icon above.",
                 }
             )
         elif isinstance(e, APIStatusError):
@@ -343,7 +343,7 @@ does not ask you to modify the code, then ignore the code.
                 await chat.append_message(
                     {
                         "role": "assistant",
-                        "content": "**Error:** Shiny Assistant is currently overloaded. Please try again later.",
+                        "content": "**Error:** Shiny Assistant's access to Anthropic is currently overloaded. Please try again later, or provide your own Anthropic API key using the gear icon above.",
                     }
                 )
 
@@ -443,9 +443,9 @@ does not ask you to modify the code, then ignore the code.
     @reactive.calc
     def language():
         if input.language_switch() == False:
-            return "python"
-        else:
             return "r"
+        else:
+            return "python"
 
     last_message_sent = 0
 
