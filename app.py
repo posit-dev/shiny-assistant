@@ -23,6 +23,8 @@ api_key = os.environ.get("ANTHROPIC_API_KEY")
 if api_key is None:
     raise ValueError("Please set the ANTHROPIC_API_KEY environment variable.")
 
+google_analytics_id = os.environ.get("GOOGLE_ANALYTICS_ID", None)
+
 
 app_dir = Path(__file__).parent
 
@@ -110,6 +112,11 @@ app_ui = ui.page_sidebar(
     ui.head_content(
         ui.tags.style(read_file("style.css")),
         ui.tags.script(read_file("scripts.js")),
+        (
+            ui.HTML((read_file("gtag.html")) % google_analytics_id)
+            if google_analytics_id is not None
+            else None
+        ),
     ),
     ui.output_ui("shinylive_iframe"),
     ui.tags.template(
