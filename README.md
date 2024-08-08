@@ -46,6 +46,6 @@ Learn about:
 Once you have your server set up, you can deploy the app with:
 
 ```
-# Deploy (replace `my-shinyapps` with your server's nickname)
-rsconnect deploy shiny -n my-shinyapps .
+# Deploy (replace `gallery` with your server's nickname)
+rsconnect deploy shiny -n gallery -t assistant .
 ```
