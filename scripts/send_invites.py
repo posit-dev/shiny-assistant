@@ -1,6 +1,9 @@
 import hmac
 import json
 import os
+import sys
+import argparse
+import re
 
 import dotenv
 import markdown
@@ -168,48 +171,90 @@ def update_sheet(service, sent_emails):
         print(f"An error occurred while updating the sheet: {error}")
 
 
-def main():
+def is_valid_email(email):
+    email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
+    return email_regex.match(email) is not None
+
+
+def process_single_email(service, email):
+    values = get_sheet_data(service)
+    if not values:
+        print("No data found in the sheet.")
+        return
+
+    for row in values[1:]:  # Start from 2 to skip header
+        if row[COL_EMAIL].lower() == email.lower():
+            invite_sent = row[COL_INVITE_SENT] if len(row) > COL_INVITE_SENT else ""
+            if invite_sent:
+                print(f"An invite has already been sent to {email}.")
+            else:
+                recipients = [{"name": row[COL_NAME], "email": email}]
+                sent_emails = send_bulk_emails(recipients)
+                if sent_emails:
+                    update_sheet(service, sent_emails)
+                    print(f"Invite sent to {email}.")
+                else:
+                    print(f"Failed to send invite to {email}.")
+            return
+
+    print(f"Email address {email} not found in the sheet.")
+
+
+def main(arg):
     service = get_google_sheet_service()
 
     try:
-        values = get_sheet_data(service)
-
-        if not values:
-            print("No data found.")
-            return
-
-        recipients = []
-        for row in values[1:]:  # Start from 2 to skip header
-            if len(recipients) >= 147:
-                break
-
-            name = row[COL_NAME]
-            email = row[COL_EMAIL]
-            invite_sent = row[COL_INVITE_SENT] if len(row) > COL_INVITE_SENT else ""
-
-            if not invite_sent:
-                recipients.append({"name": name, "email": email})
-
-        if recipients:
-            sent_emails = send_bulk_emails(recipients)
-            if sent_emails:
-                update_sheet(service, sent_emails)
-            else:
-                print("No emails were sent successfully.")
+        if isinstance(arg, str) and is_valid_email(arg):
+            process_single_email(service, arg)
         else:
-            print("No recipients found to email.")
+            max_recipients = arg
+            values = get_sheet_data(service)
+
+            if not values:
+                print("No data found.")
+                return
+
+            recipients = []
+            for row in values[1:]:  # Start from 2 to skip header
+                if len(recipients) >= max_recipients:
+                    break
+
+                name = row[COL_NAME]
+                email = row[COL_EMAIL]
+                invite_sent = row[COL_INVITE_SENT] if len(row) > COL_INVITE_SENT else ""
+
+                if not invite_sent:
+                    recipients.append({"name": name, "email": email})
+
+            if recipients:
+                sent_emails = send_bulk_emails(recipients)
+                if sent_emails:
+                    update_sheet(service, sent_emails)
+                else:
+                    print("No emails were sent successfully.")
+            else:
+                print("No recipients found to email.")
 
     except HttpError as err:
         print(f"An error occurred: {err}")
 
 
-def create_signed_url(email):
-    sig = hmac.digest(EMAIL_SIGNATURE_KEY, email.encode("utf-8"), "sha256").hex()
-    # URL encode the email and signature
-    email = requests.utils.quote(email)
-    sig = requests.utils.quote(sig)
-    return f"https://gallery.shinyapps.io/assistant/?email={email}&sig={sig}"
-
-
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Send bulk emails to recipients or process a single email."
+    )
+    parser.add_argument(
+        "arg",
+        help="Either the maximum number of recipients to email or a single email address",
+    )
+    args = parser.parse_args()
+
+    if args.arg.isdigit():
+        main(int(args.arg))
+    elif is_valid_email(args.arg):
+        main(args.arg)
+    else:
+        print(
+            "Invalid argument. Please provide either a number or a valid email address."
+        )
+        sys.exit(1)
