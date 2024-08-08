@@ -16,7 +16,11 @@ from htmltools import Tag
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.ui._card import CardItem
 
+from signature import validate_email_ui, validate_email_server
+
 SHINYLIVE_BASE_URL = "https://shinylive.io/"
+
+# Environment variables
 
 load_dotenv()
 api_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -25,6 +29,7 @@ if api_key is None:
 
 google_analytics_id = os.environ.get("GOOGLE_ANALYTICS_ID", None)
 
+email_sig_key = os.environ.get("EMAIL_SIGNATURE_KEY", None)
 
 app_dir = Path(__file__).parent
 
@@ -161,6 +166,14 @@ for child in app_ui.children:
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    with reactive.isolate():
+        querystring = input[".clientdata_url_search"]()
+
+    if not validate_email_server(
+        "validate_sig", querystring=querystring, key=email_sig_key
+    ):
+        return
+
     restoring = True
 
     shinylive_panel_visible = reactive.value(False)

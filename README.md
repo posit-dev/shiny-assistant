@@ -26,6 +26,10 @@ Create a file `.env` that contains your Anthropic API key:
 ANTHROPIC_API_KEY="xxxxxxxxxxxxxxxxx"
 ```
 
+You can also include these optional environment variables:
+
+* `EMAIL_SIGNATURE_KEY` - 32-byte hex-encoded key for email signature verification. If provided, querystring parameters `email` and `sig` will be required to access the app; if not, access is open to all visitors. If provided, be sure that it is the same value that is used when you generate signed links. If you need to create a key, you can generate one in Python with `os.urandom(32).hex()`.
+* `GOOGLE_ANALYTICS_ID` - Google Analytics ID to use for tracking page views. If provided, the Google Analytics tracking code will be included in the app.
 
 Run the app locally:
 
