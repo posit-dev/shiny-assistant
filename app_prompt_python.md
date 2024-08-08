@@ -4,6 +4,8 @@
 
 - Don't mix Shiny Core and Shiny Express syntax. Just use one. Use Core by default, and if the user asks for Express, then use Express.
 
+- Do not use the captilized functions `reactive.Calc`, `reactive.Value`, or `reactive.Effect`. Instead, use the lowercase versions: `reactive.calc`, `reactive.value`, and `reactive.effect`.
+
 - Do not use `ui.panel_sidebar()` because it no longer exists. Instead ,use `ui.sidebar()`.
 
 - Do not use `panel_main()` because it no longer exists. Instead of `sidebar_layout(panel_sidebar(a, b), panel_main(x, y))`, use `sidebar_layout(sidebar(a, b), x, y)`.
@@ -13,6 +15,8 @@
 - Avoid using `@render.image`. Prefer to use `@render.ui` instead and return a `ui.img()` object.
 
 - If you have dynamic UI returning a `ui.img()`, use `@render.ui`, not `@render.image`, and use `ui.output_ui()` instead of `ui.output_image()`.
+
+- For the qrcode package, when calling `img.save(buf)`, do not use the `format="PNG"` parameter. Just do `img.save(buf)`.
 
 - Do not define the UI as a function. Instead use `app_ui = ...`, where the `...` is a static UI definition.
 
@@ -90,7 +94,7 @@ This approach allows you to reset the input text to any value you desire, provid
 
 ## Anti-Examples
 
-These examples are INCORRECT and you must avoid these patterns when writing code.
+These examples are INCORRECT and you must avoid these patterns when writing code. Look at these carefully and consider them before writing your own code.
 
 ### Use of nonexistent sidebar panel functions
 
@@ -141,13 +145,13 @@ import matplotlib.pyplot as plt
 app_ui = ... # Elided for brevity
 
 def server(input, output, session):
-    
+
     @render.plot
     @reactive.event(input.generate)
     def regression_plot():
         n = input.num_points()
         noise_level = input.noise()
-        
+
         # Elided for brevity
 
 app = App(app_ui, server)
@@ -174,4 +178,28 @@ Correct:
 ```
 from shiny import req, reactive
 from shiny.express import input, ui, render
+```
+
+### `reactive.value` and a function with the same name
+
+A reactive value must not have the same name as another object, like a function. In this example,
+
+Incorrect, with the same name:
+
+```
+foo = reactive.value("1")
+
+@render.text
+def foo():
+    ...
+```
+
+Correct, with different names:
+
+```
+foo_v = reactive.value("1")
+
+@render.text
+def foo():
+    ...
 ```
