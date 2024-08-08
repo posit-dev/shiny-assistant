@@ -303,23 +303,37 @@ does not ask you to modify the code, then ignore the code.
                 max_tokens=3000,
             )
         except Exception as e:
+            await check_for_overload(e)
             await chat._raise_exception(e)
             return
 
         files_in_shinyapp_tags.set(None)
 
         async def logging_stream_wrapper():
-            async for chunk in response_stream:
-                if (
-                    chunk.type == "content_block_delta"
-                    and chunk.delta.type == "text_delta"
-                ):
-                    print(chunk.delta.text, end="")
-                yield chunk
-            print("")
+            try:
+                async for chunk in response_stream:
+                    if (
+                        chunk.type == "content_block_delta"
+                        and chunk.delta.type == "text_delta"
+                    ):
+                        print(chunk.delta.text, end="")
+                    yield chunk
+                print("")
+            except Exception as e:
+                await check_for_overload(e)
+                raise
 
         # Append the response stream into the chat
         await chat.append_message_stream(logging_stream_wrapper())
+
+    async def check_for_overload(e: Exception):
+        if "Overloaded" in str(e):
+            await chat.append_message(
+                {
+                    "role": "assistant",
+                    "content": "**Error:** Shiny Assistant is currently overloaded. Please try again later.",
+                }
+            )
 
     # ==================================================================================
     # Code for finding content in the <SHINYAPP> tags and sending to the client
