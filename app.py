@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Literal, TypedDict, cast
 from urllib.parse import parse_qs
 
-from anthropic import AsyncAnthropic
+from anthropic import AsyncAnthropic, RateLimitError, APIStatusError
 from app_utils import load_dotenv
 from htmltools import Tag
 
@@ -327,13 +327,25 @@ does not ask you to modify the code, then ignore the code.
         await chat.append_message_stream(logging_stream_wrapper())
 
     async def check_for_overload(e: Exception):
-        if "Overloaded" in str(e):
+        if isinstance(e, RateLimitError):
             await chat.append_message(
                 {
                     "role": "assistant",
-                    "content": "**Error:** Shiny Assistant is currently overloaded. Please try again later.",
+                    "content": "**Error:** Shiny Assistant has exceeded its rate limit. Please try again later.",
                 }
             )
+        elif isinstance(e, APIStatusError):
+            if (
+                "error" in e.body
+                and "type" in e.body["error"]
+                and e.body["error"]["type"] == "overloaded_error"
+            ):
+                await chat.append_message(
+                    {
+                        "role": "assistant",
+                        "content": "**Error:** Shiny Assistant is currently overloaded. Please try again later.",
+                    }
+                )
 
     # ==================================================================================
     # Code for finding content in the <SHINYAPP> tags and sending to the client
