@@ -167,10 +167,11 @@ for child in app_ui.children:
 
 def server(input: Inputs, output: Outputs, session: Session):
     with reactive.isolate():
+        hostname = input[".clientdata_url_hostname"]()
         querystring = input[".clientdata_url_search"]()
 
     if not validate_email_server(
-        "validate_sig", querystring=querystring, key=email_sig_key
+        "validate_sig", hostname=hostname, querystring=querystring, key=email_sig_key
     ):
         return
 

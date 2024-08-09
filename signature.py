@@ -27,11 +27,17 @@ def validate_email_server(
     input: Inputs,
     output: Outputs,
     session: Session,
+    *,
+    hostname: str,
     querystring: str,
     key: bytes | str | None,
 ) -> bool:
     if key is None:
         # No signature; anyone is allowed
+        return True
+    if hostname == "localhost":
+        # Bypass signature check for localhost. Note that this is the hostname
+        # as seen by the client, not the server.
         return True
 
     if querystring.startswith("?"):
