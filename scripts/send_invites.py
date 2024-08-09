@@ -1,9 +1,11 @@
+#!/usr/bin/env python3
+
+import argparse
 import hmac
 import json
 import os
-import sys
-import argparse
 import re
+import sys
 
 import dotenv
 import markdown
