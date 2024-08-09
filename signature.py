@@ -35,7 +35,7 @@ def validate_email_server(
     if key is None:
         # No signature; anyone is allowed
         return True
-    if hostname == "localhost":
+    if not os.getenv("ENFORCE_SIG_ON_LOCALHOST") and hostname == "localhost":
         # Bypass signature check for localhost. Note that this is the hostname
         # as seen by the client, not the server.
         return True
@@ -45,8 +45,6 @@ def validate_email_server(
     qs = parse_qs(querystring)
     email = qs.get("email", [""])[0]
     digest = qs.get("sig", [""])[0]
-    print(email)
-    print(digest)
 
     if verify_hmac(key, email, digest):
         return True
@@ -54,7 +52,7 @@ def validate_email_server(
         ui.modal_show(
             ui.modal(
                 denied_message,
-                title="Shiny Assistant is currently in closed beta",
+                title="Invitation required",
                 footer=[],
             )
         )

@@ -291,7 +291,7 @@ does not ask you to modify the code, then ignore the code.
 
 { messages[-1]["content"] }
 """
-        print(messages[-1]["content"])
+        # print(messages[-1]["content"])
 
         await sync_latest_messages()
 
@@ -318,9 +318,10 @@ does not ask you to modify the code, then ignore the code.
                         chunk.type == "content_block_delta"
                         and chunk.delta.type == "text_delta"
                     ):
-                        print(chunk.delta.text, end="")
+                        ...
+                        # print(chunk.delta.text, end="")
                     yield chunk
-                print("")
+                # print("")
             except Exception as e:
                 await check_for_overload(e)
                 raise
