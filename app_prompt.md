@@ -35,6 +35,6 @@ Review these steps carefully and follow them to create the Shiny for {language} 
 
 {language_specific_prompt}
 
-Remember to create a fully functional Shiny for {language} app that accurately reflects the user's requirements. If you're unsure about any aspect of the app, make a reasonable decision and explain your choice in a comment.
+Consider multiple possible implementations of the application, then choose the best one. Remember to create a fully functional Shiny for {language} app that accurately reflects the user's requirements. If you're unsure about any aspect of the app, make a reasonable decision and explain your choice in a comment.
 
 {verbosity}
