@@ -9,14 +9,14 @@ from pathlib import Path
 from typing import Literal, TypedDict, cast
 from urllib.parse import parse_qs
 
-from anthropic import AsyncAnthropic, RateLimitError, APIStatusError
+from anthropic import APIStatusError, AsyncAnthropic, RateLimitError
+from anthropic.types import MessageParam
 from app_utils import load_dotenv
 from htmltools import Tag
+from signature import validate_email_server, validate_email_ui
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.ui._card import CardItem
-
-from signature import validate_email_ui, validate_email_server
 
 SHINYLIVE_BASE_URL = "https://shinylive.io/"
 
@@ -276,6 +276,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         restoring = False
 
         messages = chat.messages(token_limits=(8000, 3000), format="anthropic")
+        messages = remove_consecutive_messages(messages)
         messages[-1][
             "content"
         ] = f"""
@@ -494,6 +495,26 @@ def shinyapp_tag_contents_to_filecontents(input: str) -> list[FileContent]:
         file_contents.append({"name": name, "content": content, "type": "text"})
 
     return file_contents
+
+
+# Remove any consecutive user or assistant messages. Only keep the last one in a
+# sequence. For example, if there are multiple user messages in a row, only keep the
+# last one. This is helpful for when the user sends multiple messages in a row, which
+# can happen if there was an error handling the previous message.
+def remove_consecutive_messages(
+    messages: tuple[MessageParam, ...],
+) -> tuple[MessageParam, ...]:
+    if len(messages) < 2:
+        return messages
+
+    new_messages: list[MessageParam] = []
+    for i in range(len(messages) - 1):
+        if messages[i]["role"] != messages[i + 1]["role"]:
+            new_messages.append(messages[i])
+
+    new_messages.append(messages[-1])
+
+    return tuple(new_messages)
 
 
 app = App(app_ui, server)
