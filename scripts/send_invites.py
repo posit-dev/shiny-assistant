@@ -9,6 +9,7 @@ import sys
 
 import dotenv
 import markdown
+import pandas as pd
 import requests
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -40,18 +41,6 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 # The ID and range of the spreadsheet.
 SHEET_ID = "1uXXu3phsi64CtKd52d5NKW5PTS9aBJQbzlp3qsUnGTc"
 SHEET_RANGE = "Form Responses 1!A:H"
-COL_EMAIL = 1
-COL_NAME = 2
-COL_INVITE_SENT = 7
-
-# Column A: Timestamp
-# Column B: Email Address
-# Column C: Your name
-# Column D: Company/Affiliation
-# Column E: Job title/Occupation
-# Column F: What Shiny language(s) are you interested in writing apps in?
-# Column G: Do you already have an Anthropic API key?
-# Column H: Invite sent?
 
 
 def get_google_sheet_service():
@@ -72,6 +61,32 @@ def get_google_sheet_service():
     return build("sheets", "v4", credentials=creds)
 
 
+def get_sheet_data(service):
+    try:
+        result = (
+            service.spreadsheets()
+            .values()
+            .get(spreadsheetId=SHEET_ID, range=SHEET_RANGE)
+            .execute()
+        )
+        values = result.get("values", [])
+        df = pd.DataFrame(values[1:], columns=values[0])
+        df.columns = [
+            "timestamp",
+            "email",
+            "name",
+            "company",
+            "title",
+            "shiny_languages",
+            "anthropic_api_key",
+            "invite_sent",
+        ]
+        return df
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+        return None
+
+
 def read_email_template():
     try:
         with open(template_path, "r") as file:
@@ -86,22 +101,20 @@ def read_email_template():
         return None
 
 
-def send_bulk_emails(recipients):
+def send_bulk_emails(recipients_df):
     successful_emails = []
 
-    # Read email template
     html_content = read_email_template()
     if not html_content:
         print("Failed to read email template. Aborting email send.")
         return successful_emails
 
-    # Prepare the recipient variables
     recipient_variables = {
-        recipient["email"]: {
-            "name": recipient["name"],
-            "url": create_signed_url(recipient["email"]),
+        row["email"]: {
+            "name": row["name"],
+            "url": create_signed_url(row["email"]),
         }
-        for recipient in recipients
+        for _, row in recipients_df.iterrows()
     }
 
     try:
@@ -111,7 +124,7 @@ def send_bulk_emails(recipients):
             data={
                 "from": MAILGUN_FROM_EMAIL,
                 "h:Reply-To": "winston+shinyassistant@posit.co",
-                "to": [recipient["email"] for recipient in recipients],
+                "to": recipients_df["email"].tolist(),
                 "subject": "Your Shiny Assistant invitation is here",
                 "html": html_content,
                 "recipient-variables": json.dumps(recipient_variables),
@@ -119,7 +132,7 @@ def send_bulk_emails(recipients):
         )
 
         if response.status_code == 200:
-            successful_emails = [recipient["email"] for recipient in recipients]
+            successful_emails = recipients_df["email"].tolist()
             print(
                 f"Bulk email sent successfully to {len(successful_emails)} recipients."
             )
@@ -131,41 +144,24 @@ def send_bulk_emails(recipients):
     return successful_emails
 
 
-def get_sheet_data(service):
-    try:
-        result = (
-            service.spreadsheets()
-            .values()
-            .get(
-                spreadsheetId=SHEET_ID,
-                range=SHEET_RANGE,
-            )
-            .execute()
-        )
-
-        values = result.get("values", [])
-        return values
-    except HttpError as error:
-        print(f"An error occurred: {error}")
-        return None
-
-
 def update_sheet(service, sent_emails):
     try:
-        values = get_sheet_data(service)
+        df = get_sheet_data(service)
+        df.loc[
+            df["email"].isin(sent_emails) & (df["invite_sent"] != "Yes"), "invite_sent"
+        ] = "Yes"
+
         updates = []
-        for i, row in enumerate(values[1:], start=2):  # Start from 2 to skip header
-            email = row[COL_EMAIL]
-            invite_sent = row[COL_INVITE_SENT] if len(row) > COL_INVITE_SENT else ""
-            if email in sent_emails and not invite_sent:
-                updates.append({"range": f"Form Responses 1!H{i}", "values": [["Yes"]]})
+        for index, row in df.iterrows():
+            if row["email"] in sent_emails and row["invite_sent"] == "Yes":
+                updates.append(
+                    {"range": f"Form Responses 1!H{index + 2}", "values": [["Yes"]]}
+                )
 
         if updates:
             body = {"valueInputOption": "RAW", "data": updates}
-            result = (
-                service.spreadsheets()
-                .values()
-                .batchUpdate(spreadsheetId=SHEET_ID, body=body)
+            service.spreadsheets().values().batchUpdate(
+                spreadsheetId=SHEET_ID, body=body
             ).execute()
             print(f"Sheet updated for {len(updates)} rows.")
         else:
@@ -180,91 +176,61 @@ def is_valid_email(email):
 
 
 def process_single_email(service, email):
-    values = get_sheet_data(service)
-    if not values:
+    df = get_sheet_data(service)
+    if df.empty:
         print("No data found in the sheet.")
         return
 
-    for row in values[1:]:  # Start from 2 to skip header
-        if row[COL_EMAIL].lower() == email.lower():
-            invite_sent = row[COL_INVITE_SENT] if len(row) > COL_INVITE_SENT else ""
-            if invite_sent:
-                print(f"An invite has already been sent to {email}.")
+    row = df[df["email"].str.lower() == email.lower()]
+    if not row.empty:
+        if row["invite_sent"].values[0] == "Yes":
+            print(f"An invite has already been sent to {email}.")
+        else:
+            recipients = row[["name", "email"]]
+            sent_emails = send_bulk_emails(recipients)
+            if sent_emails:
+                update_sheet(service, sent_emails)
+                print(f"Invite sent to {email}.")
             else:
-                recipients = [{"name": row[COL_NAME], "email": email}]
-                sent_emails = send_bulk_emails(recipients)
-                if sent_emails:
-                    update_sheet(service, sent_emails)
-                    print(f"Invite sent to {email}.")
-                else:
-                    print(f"Failed to send invite to {email}.")
-            return
-
-    print(f"Email address {email} not found in the sheet.")
+                print(f"Failed to send invite to {email}.")
+    else:
+        print(f"Email address {email} not found in the sheet.")
 
 
-def create_signed_url(email):
-    sig = hmac.digest(EMAIL_SIGNATURE_KEY, email.encode("utf-8"), "sha256").hex()
-    # URL encode the email and signature
-    email = requests.utils.quote(email)
-    sig = requests.utils.quote(sig)
-    return f"https://gallery.shinyapps.io/assistant/?email={email}&sig={sig}"
-
-
-def print_pending_invites(service):
-    values = get_sheet_data(service)
-    if not values:
-        print("No data found in the sheet.")
-        return
-
-    pending_invites = []
-    for row in values[1:]:  # Start from 2 to skip header
-        invite_sent = row[COL_INVITE_SENT] if len(row) > COL_INVITE_SENT else ""
-        if not invite_sent:
-            name = row[COL_NAME]
-            email = row[COL_EMAIL]
-            company = row[3] if len(row) > 3 else "N/A"
-            title = row[4] if len(row) > 4 else "N/A"
-            pending_invites.append((name, email, company, title))
-
-    if pending_invites:
+def print_pending_invites(df):
+    pending_invites = df[df["invite_sent"] != "Yes"].drop(columns=["invite_sent"])
+    if not pending_invites.empty:
         print("Pending invites:")
-        for name, email, company, title in pending_invites:
-            print(f"Name: {name}, Email: {email}, Company: {company}, Title: {title}")
+        print(pending_invites)
         print(f"\nTotal pending invites: {len(pending_invites)}")
     else:
         print("No pending invites found.")
 
 
+def create_signed_url(email):
+    sig = hmac.digest(EMAIL_SIGNATURE_KEY, email.encode("utf-8"), "sha256").hex()
+    email = requests.utils.quote(email)
+    sig = requests.utils.quote(sig)
+    return f"https://gallery.shinyapps.io/assistant/?email={email}&sig={sig}"
+
+
 def main(arg=None):
     service = get_google_sheet_service()
+    df = get_sheet_data(service)
+
+    if df is None or df.empty:
+        print("No data found.")
+        return
 
     try:
         if arg is None:
-            print_pending_invites(service)
+            print_pending_invites(df)
         elif isinstance(arg, str) and is_valid_email(arg):
             process_single_email(service, arg)
         else:
             max_recipients = arg
-            values = get_sheet_data(service)
-
-            if not values:
-                print("No data found.")
-                return
-
-            recipients = []
-            for row in values[1:]:  # Start from 2 to skip header
-                if len(recipients) >= max_recipients:
-                    break
-
-                name = row[COL_NAME]
-                email = row[COL_EMAIL]
-                invite_sent = row[COL_INVITE_SENT] if len(row) > COL_INVITE_SENT else ""
-
-                if not invite_sent:
-                    recipients.append({"name": name, "email": email})
-
-            if recipients:
+            recipients = df[(df["invite_sent"] != "Yes")].head(max_recipients)
+            if not recipients.empty:
                 sent_emails = send_bulk_emails(recipients)
                 if sent_emails:
                     update_sheet(service, sent_emails)
