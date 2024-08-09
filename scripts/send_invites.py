@@ -211,11 +211,38 @@ def create_signed_url(email):
     return f"https://gallery.shinyapps.io/assistant/?email={email}&sig={sig}"
 
 
-def main(arg):
+def print_pending_invites(service):
+    values = get_sheet_data(service)
+    if not values:
+        print("No data found in the sheet.")
+        return
+
+    pending_invites = []
+    for row in values[1:]:  # Start from 2 to skip header
+        invite_sent = row[COL_INVITE_SENT] if len(row) > COL_INVITE_SENT else ""
+        if not invite_sent:
+            name = row[COL_NAME]
+            email = row[COL_EMAIL]
+            company = row[3] if len(row) > 3 else "N/A"
+            title = row[4] if len(row) > 4 else "N/A"
+            pending_invites.append((name, email, company, title))
+
+    if pending_invites:
+        print("Pending invites:")
+        for name, email, company, title in pending_invites:
+            print(f"Name: {name}, Email: {email}, Company: {company}, Title: {title}")
+        print(f"\nTotal pending invites: {len(pending_invites)}")
+    else:
+        print("No pending invites found.")
+
+
+def main(arg=None):
     service = get_google_sheet_service()
 
     try:
-        if isinstance(arg, str) and is_valid_email(arg):
+        if arg is None:
+            print_pending_invites(service)
+        elif isinstance(arg, str) and is_valid_email(arg):
             process_single_email(service, arg)
         else:
             max_recipients = arg
@@ -252,20 +279,23 @@ def main(arg):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Send bulk emails to recipients or process a single email."
+        description="Send bulk emails to recipients, process a single email, or list pending invites."
     )
     parser.add_argument(
         "arg",
-        help="Either the maximum number of recipients to email or a single email address",
+        nargs="?",
+        help="Either the maximum number of recipients to email or a single email address. If not provided, lists pending invites.",
     )
     args = parser.parse_args()
 
-    if args.arg.isdigit():
+    if args.arg is None:
+        main()
+    elif args.arg.isdigit():
         main(int(args.arg))
     elif is_valid_email(args.arg):
         main(args.arg)
     else:
         print(
-            "Invalid argument. Please provide either a number or a valid email address."
+            "Invalid argument. Please provide either a number, a valid email address, or no argument to list pending invites."
         )
         sys.exit(1)
