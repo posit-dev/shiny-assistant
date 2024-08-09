@@ -22,8 +22,8 @@ dotenv.load_dotenv(os.path.join(parent_dir, ".env"))
 
 # Mailgun configuration
 MAILGUN_API_KEY = os.getenv("MAILGUN_API_KEY", None)
-MAILGUN_DOMAIN = "mg.shiny.express"
-MAILGUN_FROM_EMAIL = "invites@mg.shiny.express"
+MAILGUN_DOMAIN = "shiny.express"
+MAILGUN_FROM_EMAIL = "invite@shiny.express"
 if not MAILGUN_API_KEY:
     raise ValueError("MAILGUN_API_KEY is not set in environment or .env file")
 
@@ -108,6 +108,7 @@ def send_bulk_emails(recipients):
             auth=("api", MAILGUN_API_KEY),
             data={
                 "from": MAILGUN_FROM_EMAIL,
+                "h:Reply-To": "winston+shinyassistant@posit.co",
                 "to": [recipient["email"] for recipient in recipients],
                 "subject": "Your Shiny Assistant invitation is here",
                 "html": html_content,
@@ -198,6 +199,14 @@ def process_single_email(service, email):
             return
 
     print(f"Email address {email} not found in the sheet.")
+
+
+def create_signed_url(email):
+    sig = hmac.digest(EMAIL_SIGNATURE_KEY, email.encode("utf-8"), "sha256").hex()
+    # URL encode the email and signature
+    email = requests.utils.quote(email)
+    sig = requests.utils.quote(sig)
+    return f"https://gallery.shinyapps.io/assistant/?email={email}&sig={sig}"
 
 
 def main(arg):
