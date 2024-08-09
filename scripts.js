@@ -371,3 +371,38 @@ function showShinylivePanel(smooth) {
   //   .querySelector(".bslib-sidebar-layout")
   //   .style.setProperty("--_sidebar-width", defaultSidebarWidth);
 }
+
+// =====================================================================================
+// Close popover when clicking outside
+// =====================================================================================
+
+function getTriggerElement(popoverElement) {
+  // Get all potential trigger elements
+  const triggers = document.querySelectorAll('[data-bs-toggle="popover"]');
+
+  // Iterate through triggers to find the one that matches our popover
+  for (let trigger of triggers) {
+    const popoverInstance = bootstrap.Popover.getInstance(trigger);
+    if (popoverInstance && popoverInstance.tip === popoverElement) {
+      return trigger;
+    }
+  }
+
+  // If no matching trigger is found
+  return null;
+}
+
+document.addEventListener("click", (e) => {
+  const popovers = document.querySelectorAll(".popover");
+  popovers.forEach((popover) => {
+    if (!popover.contains(e.target)) {
+      const trigger = getTriggerElement(popover);
+      if (trigger && !trigger.contains(e.target)) {
+        const popoverInstance = bootstrap.Popover.getInstance(trigger);
+        if (popoverInstance) {
+          popoverInstance.hide();
+        }
+      }
+    }
+  });
+});
