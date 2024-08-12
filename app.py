@@ -50,7 +50,7 @@ app_prompt_language_specific = {
 
 
 greeting = """
-Hello! I'm here to help you with Shiny. You can ask me questions about how to use Shiny,
+Hello, I'm Shiny Assistant! I'm here to help you with [Shiny](https://shiny.posit.co), a web framework for data driven apps. You can ask me questions about how to use Shiny,
 to explain how certain things work in Shiny, or even ask me to build a Shiny app for
 you.
 
@@ -62,6 +62,20 @@ Here are some examples:
 - Ask me, "Open the editor", then copy and paste your existing Shiny code into the editor, and then ask me to make changes to it.
 
 Let's get started! 🚀
+
+<div class="position-relative">
+  <div class="position-absolute start-50 translate-middle rounded-pill badge border border-default text-bg-light text-center"
+      style="font-weight: normal; cursor: pointer;"
+      data-bs-toggle="popover"
+      title="Privacy notice"
+      data-bs-content="The Shiny team reserves the right to log your conversations and use them to fine-tune Shiny Assistant and improve Shiny. Also, all conversation activity and Shinylive editor content in this window will be sent to APIs controlled by Anthropic PBC. Please do not use Shiny Assistant for sensitive work!">
+    Who can see my activity?
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+      <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+    </svg>
+  </div>
+</div>
 """
 
 
@@ -149,6 +163,16 @@ app_ui = ui.page_sidebar(
             title="Reconnecting...",
         ),
         id="custom_reconnecting_modal",
+    ),
+    ui.tags.script(
+        """
+        setTimeout(() => {
+            var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+            var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+                return new bootstrap.Popover(popoverTriggerEl)
+            })
+        }, 1000);
+        """
     ),
     fillable=True,
 )
