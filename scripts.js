@@ -406,3 +406,17 @@ document.addEventListener("click", (e) => {
     }
   });
 });
+
+setTimeout(() => {
+  var popoverTriggerList = Array.from(
+    document.querySelectorAll('[data-bs-toggle="popover"]')
+  );
+
+  var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+    // Only initialize popovers that haven't already be initialized (a bslib popover
+    // would already be initalized by this point, and re-initializing would break it).
+    if (bootstrap.Popover.getInstance(popoverTriggerEl) === null) {
+      return new bootstrap.Popover(popoverTriggerEl);
+    }
+  });
+}, 1000);
