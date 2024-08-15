@@ -25,8 +25,8 @@ dotenv.load_dotenv(os.path.join(parent_dir, ".env"))
 
 # Mailgun configuration
 MAILGUN_API_KEY = os.getenv("MAILGUN_API_KEY", None)
-MAILGUN_DOMAIN = "shiny.express"
-MAILGUN_FROM_EMAIL = "invite@shiny.express"
+MAILGUN_DOMAIN = "t.mx.posit.co"
+MAILGUN_FROM_EMAIL = "shiny-assistant-invite@t.mx.posit.co"
 if not MAILGUN_API_KEY:
     raise ValueError("MAILGUN_API_KEY is not set in environment or .env file")
 
