@@ -6,48 +6,45 @@ function chatMessagesContainer() {
   return document.getElementById("chat");
 }
 
-// TODO: Replace this with Shiny.initializePromise when that lands in Shiny for Python
-$(document).on("shiny:sessioninitialized", function (event) {
-  setTimeout(() => {
-    // When the user clicks on the send button, request the latest version of the files
-    // from the shinylive iframe. This communication is async, so the file contents will
-    // arrive later on the server side than the user chat message.
-    messageTriggerCounter = 0;
-    chatMessagesContainer().addEventListener(
-      "shiny-chat-input-sent",
-      async (e) => {
-        const fileContents = await requestFileContentsFromWindow();
-        Shiny.setInputValue("editor_code", fileContents, {
-          priority: "event",
-        });
-        // This can be removed once we fix
-        // https://github.com/posit-dev/py-shiny/issues/1600
-        Shiny.setInputValue("message_trigger", messageTriggerCounter++);
-      }
-    );
-
-    // Receive custom message with app code and send to the shinylive panel.
-    Shiny.addCustomMessageHandler("set-shinylive-content", async (message) => {
-      // It's critical that we NOT await ensureShinylivePanel from within async
-      // custom message handlers. You will get hangs because
-      // ensureShinylivePanel will not resolve until the shinylive panel is
-      // ready, but for that to happen, a new custom message must be sent from
-      // the server back to the client, which will not be handled because the
-      // await holds up the message handler loop.
-      //
-      // Instead, we handle the promise without awaiting it directly.
-      ensureShinylivePanel().then(() => {
-        sendFileContentsToWindow(message.files);
+Shiny.initializedPromise.then(() => {
+  // When the user clicks on the send button, request the latest version of the files
+  // from the shinylive iframe. This communication is async, so the file contents will
+  // arrive later on the server side than the user chat message.
+  messageTriggerCounter = 0;
+  chatMessagesContainer().addEventListener(
+    "shiny-chat-input-sent",
+    async (e) => {
+      const fileContents = await requestFileContentsFromWindow();
+      Shiny.setInputValue("editor_code", fileContents, {
+        priority: "event",
       });
-    });
+      // This can be removed once we fix
+      // https://github.com/posit-dev/py-shiny/issues/1600
+      Shiny.setInputValue("message_trigger", messageTriggerCounter++);
+    }
+  );
 
-    // Receive custom message to show the shinylive panel
-    Shiny.addCustomMessageHandler("show-shinylive-panel", (message) => {
-      if (message.show === true) {
-        showShinylivePanel(message.smooth);
-      }
+  // Receive custom message with app code and send to the shinylive panel.
+  Shiny.addCustomMessageHandler("set-shinylive-content", async (message) => {
+    // It's critical that we NOT await ensureShinylivePanel from within async
+    // custom message handlers. You will get hangs because
+    // ensureShinylivePanel will not resolve until the shinylive panel is
+    // ready, but for that to happen, a new custom message must be sent from
+    // the server back to the client, which will not be handled because the
+    // await holds up the message handler loop.
+    //
+    // Instead, we handle the promise without awaiting it directly.
+    ensureShinylivePanel().then(() => {
+      sendFileContentsToWindow(message.files);
     });
-  }, 100);
+  });
+
+  // Receive custom message to show the shinylive panel
+  Shiny.addCustomMessageHandler("show-shinylive-panel", (message) => {
+    if (message.show === true) {
+      showShinylivePanel(message.smooth);
+    }
+  });
 });
 
 // Listener for "Run code" buttons.
