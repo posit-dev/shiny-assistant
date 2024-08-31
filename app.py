@@ -200,7 +200,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             return AsyncAnthropic(api_key=input.api_key())
         else:
             return AsyncAnthropic(api_key=api_key)
-        llm = AsyncAnthropic(api_key=api_key)
 
     @reactive.calc
     def app_prompt() -> str:
