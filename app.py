@@ -13,10 +13,12 @@ from anthropic import APIStatusError, AsyncAnthropic, RateLimitError
 from anthropic.types import MessageParam
 from app_utils import load_dotenv
 from htmltools import Tag
-from signature import validate_email_server, validate_email_ui
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.ui._card import CardItem
+
+# from signature import validate_email_server, validate_email_ui
+
 
 SHINYLIVE_BASE_URL = "https://shinylive.io/"
 
@@ -29,7 +31,7 @@ if api_key is None:
 
 google_analytics_id = os.environ.get("GOOGLE_ANALYTICS_ID", None)
 
-email_sig_key = os.environ.get("EMAIL_SIGNATURE_KEY", None)
+# email_sig_key = os.environ.get("EMAIL_SIGNATURE_KEY", None)
 
 app_dir = Path(__file__).parent
 
@@ -180,14 +182,14 @@ for child in app_ui.children:
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    with reactive.isolate():
-        hostname = input[".clientdata_url_hostname"]()
-        querystring = input[".clientdata_url_search"]()
+    # with reactive.isolate():
+    #     hostname = input[".clientdata_url_hostname"]()
+    #     querystring = input[".clientdata_url_search"]()
 
-    if not validate_email_server(
-        "validate_sig", hostname=hostname, querystring=querystring, key=email_sig_key
-    ):
-        return
+    # if not validate_email_server(
+    #     "validate_sig", hostname=hostname, querystring=querystring, key=email_sig_key
+    # ):
+    #     return
 
     restoring = True
 
