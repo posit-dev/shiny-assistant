@@ -131,6 +131,7 @@ app_ui = ui.page_sidebar(
         padding="3px",
     ),
     ui.head_content(
+        ui.tags.title("Shiny Assistant"),
         ui.tags.style(read_file("style.css")),
         ui.tags.script(read_file("scripts.js")),
         (
