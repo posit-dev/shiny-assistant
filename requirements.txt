@@ -1,4 +1,4 @@
-shiny @ git+https://github.com/posit-dev/py-shiny@77a67927
+shiny
 python-dotenv
 anthropic
 
