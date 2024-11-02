@@ -6,22 +6,21 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Literal, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast
 from urllib.parse import parse_qs
 
 from anthropic import APIStatusError, AsyncAnthropic, RateLimitError
 from anthropic.types import MessageParam
+from anthropic.types.beta.prompt_caching import RawPromptCachingBetaMessageStartEvent
 from anthropic.types.beta.prompt_caching.prompt_caching_beta_message_param import (
     PromptCachingBetaMessageParam,
-)
-from anthropic.types.beta.prompt_caching.prompt_caching_beta_text_block_param import (
-    PromptCachingBetaTextBlockParam,
 )
 from app_utils import load_dotenv
 from htmltools import Tag
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.ui._card import CardItem
+from shiny.ui._chat_normalize import AnthropicNormalizer
 
 # from signature import validate_email_server, validate_email_ui
 
@@ -596,6 +595,26 @@ def transform_messages_to_prompt_caching_format(
             transformed.append({"role": "assistant", "content": content})
 
     return transformed
+
+
+# ======================================================================================
+# This is needed until https://github.com/posit-dev/py-shiny/pull/1755 is merged and
+# released.
+class AnthropicPromptCachingNormalizer(AnthropicNormalizer):
+    def can_normalize_chunk(self, chunk: Any) -> bool:
+
+        if isinstance(chunk, RawPromptCachingBetaMessageStartEvent):
+            return True
+
+        return super().can_normalize_chunk(chunk)
+
+
+ui._chat_normalize.message_normalizer_registry.register(
+    "anthropic",
+    AnthropicPromptCachingNormalizer(),
+    force=True,
+)
+# ======================================================================================
 
 
 app = App(app_ui, server)
