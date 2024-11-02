@@ -11,6 +11,12 @@ from urllib.parse import parse_qs
 
 from anthropic import APIStatusError, AsyncAnthropic, RateLimitError
 from anthropic.types import MessageParam
+from anthropic.types.beta.prompt_caching.prompt_caching_beta_message_param import (
+    PromptCachingBetaMessageParam,
+)
+from anthropic.types.beta.prompt_caching.prompt_caching_beta_text_block_param import (
+    PromptCachingBetaTextBlockParam,
+)
 from app_utils import load_dotenv
 from htmltools import Tag
 
@@ -292,8 +298,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         nonlocal restoring
         restoring = False
 
-        messages = chat.messages(token_limits=(8000, 3000), format="anthropic")
+        messages = chat.messages(token_limits=(16000, 3000), format="anthropic")
         messages = remove_consecutive_messages(messages)
+
         messages[-1][
             "content"
         ] = f"""
@@ -309,13 +316,21 @@ does not ask you to modify the code, then ignore the code.
 """
         # print(messages[-1]["content"])
 
+        messages = transform_messages_to_prompt_caching_format(messages)
+
         await sync_latest_messages()
 
         # Create a response message stream
         try:
-            response_stream = await llm().messages.create(
-                model="claude-3-5-sonnet-latest",
-                system=app_prompt(),
+            response_stream = await llm().beta.prompt_caching.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                system=[
+                    {
+                        "type": "text",
+                        "text": app_prompt(),
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
                 messages=messages,
                 stream=True,
                 max_tokens=3000,
@@ -533,6 +548,54 @@ def remove_consecutive_messages(
     new_messages.append(messages[-1])
 
     return tuple(new_messages)
+
+
+def transform_messages_to_prompt_caching_format(
+    messages: list[MessageParam] | tuple[MessageParam, ...],
+) -> list[PromptCachingBetaMessageParam]:
+    """
+    Transform a list/tuple of messages into the new prompt caching format.
+    """
+    transformed: list[PromptCachingBetaMessageParam] = []
+
+    for msg in messages:
+        if msg["role"] == "user":
+            # Transform user messages into the new format
+
+            content = msg["content"]
+
+            if not isinstance(content, str):
+                raise ValueError(
+                    "User messages must be strings, but got a non-string content: "
+                    + str(content)
+                )
+
+            transformed.append(
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": content,
+                            "cache_control": {"type": "ephemeral"},
+                        }
+                    ],
+                }
+            )
+        else:
+            # Keep assistant messages as is. We're checking for string content mostly
+            # to make the type checker happy.
+            content = msg["content"]
+
+            if not isinstance(content, str):
+                raise ValueError(
+                    "Assistant messages must be strings, but got a non-string content: "
+                    + str(content)
+                )
+
+            transformed.append({"role": "assistant", "content": content})
+
+    return transformed
 
 
 app = App(app_ui, server)
