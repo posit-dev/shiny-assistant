@@ -551,25 +551,38 @@ def remove_consecutive_messages(
 
 def transform_messages_to_prompt_caching_format(
     messages: list[MessageParam] | tuple[MessageParam, ...],
+    max_cache_breakpoints: int = 3,
 ) -> list[PromptCachingBetaMessageParam]:
     """
     Transform a list/tuple of messages into the new prompt caching format.
+
+    Parameters
+    ----------
+    messages
+        The messages to transform
+    max_cache_breakpoints
+        Maximum number of user messages to transform. This defaults to 3, because
+        Anthropic's prompt caching only supports 4 total breakpoints, and there is
+        already one in the system prompt.
+
+    Returns
+    -------
+    list[PromptCachingBetaMessageParam]
+        The transformed messages in prompt caching format
     """
     transformed: list[PromptCachingBetaMessageParam] = []
+    user_messages_transformed = 0
 
-    for msg in messages:
-        if msg["role"] == "user":
-            # Transform user messages into the new format
-
+    for msg in reversed(messages):
+        if msg["role"] == "user" and user_messages_transformed < max_cache_breakpoints:
             content = msg["content"]
-
             if not isinstance(content, str):
                 raise ValueError(
                     "User messages must be strings, but got a non-string content: "
                     + str(content)
                 )
-
-            transformed.append(
+            transformed.insert(
+                0,
                 {
                     "role": "user",
                     "content": [
@@ -579,20 +592,19 @@ def transform_messages_to_prompt_caching_format(
                             "cache_control": {"type": "ephemeral"},
                         }
                     ],
-                }
+                },
             )
+            user_messages_transformed += 1
         else:
             # Keep assistant messages as is. We're checking for string content mostly
             # to make the type checker happy.
             content = msg["content"]
-
             if not isinstance(content, str):
                 raise ValueError(
-                    "Assistant messages must be strings, but got a non-string content: "
+                    f"{msg['role']} messages must be strings, but got a non-string content: "
                     + str(content)
                 )
-
-            transformed.append({"role": "assistant", "content": content})
+            transformed.insert(0, {"role": msg["role"], "content": content})
 
     return transformed
 
