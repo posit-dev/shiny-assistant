@@ -1,5 +1,6 @@
 shiny
 python-dotenv
+tokenizers
 anthropic
 
 # For emails
