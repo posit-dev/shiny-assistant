@@ -1,5 +1,5 @@
-Shiny app for using LLMs to create Shiny apps
-=============================================
+Shiny Assistant implemented in Shiny for Python
+===============================================
 
 
 ## Prequisites
