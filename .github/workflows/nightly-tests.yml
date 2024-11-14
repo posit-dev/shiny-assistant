@@ -33,6 +33,6 @@ jobs:
           pip install -r tests/requirements.txt
           playwright install chromium --with-deps
 
-      - name: Process issue description
-        id: process-description
+      - name: Run playwright test
+        id: playwright-test
         run: python tests/run_smoke_test.py
