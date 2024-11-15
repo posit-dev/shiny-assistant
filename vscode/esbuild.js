@@ -20,7 +20,7 @@ const esbuildProblemMatcherPlugin = {
       result.errors.forEach(({ text, location }) => {
         console.error(`✘ [ERROR] ${text}`);
         console.error(
-          `    ${location.file}:${location.line}:${location.column}:`
+          `    ${location.file}:${location.line}:${location.column}:`,
         );
       });
       console.log("[watch] build finished");
@@ -36,8 +36,8 @@ const tailwindPlugin = {
       const result = await postcss([
         tailwindcss({
           config: "./webview/tailwind.config.js",
-          content: ["./webview/src/**/*.{html,js,jsx,ts,tsx}"]
-        })
+          content: ["./webview/src/**/*.{html,js,jsx,ts,tsx}"],
+        }),
       ]).process(css, { from: args.path });
       return {
         contents: result.css,
@@ -94,7 +94,7 @@ async function main() {
           await context.dispose();
         }
       })
-      .catch(() => process.exit(1))
+      .catch(() => process.exit(1)),
   );
 }
 

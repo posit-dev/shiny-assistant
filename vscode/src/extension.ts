@@ -6,13 +6,13 @@ export function activate(context: vscode.ExtensionContext) {
   const provider = new ShinyAssistantViewProvider(context.extensionUri);
 
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider("shiny-assistant.view", provider)
+    vscode.window.registerWebviewViewProvider("shiny-assistant.view", provider),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("shiny-assistant.sendMessage", () => {
       provider.sendMessage("Hello from Shiny Assistant!");
-    })
+    }),
   );
 }
 
@@ -29,7 +29,7 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
     _context: vscode.WebviewViewResolveContext,
-    _token: vscode.CancellationToken
+    _token: vscode.CancellationToken,
   ) {
     this._view = webviewView;
 
@@ -68,13 +68,13 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
       this.extensionUri,
       "dist",
       "webview",
-      "main.js"
+      "main.js",
     );
     const stylePathOnDisk = vscode.Uri.joinPath(
       this.extensionUri,
       "dist",
       "webview",
-      "main.css"
+      "main.css",
     );
 
     const scriptUri = webview.asWebviewUri(scriptPathOnDisk);

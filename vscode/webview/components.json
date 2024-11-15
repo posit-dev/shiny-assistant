@@ -1,14 +1,14 @@
 {
-    "style": "default",
-    "tailwind": {
-      "config": "tailwind.config.js",
-      "css": "src/app/globals.css",
-      "baseColor": "zinc",
-      "cssVariables": true
-    },
-    "rsc": false,
-    "aliases": {
-      "utils": "@/lib/utils",
-      "components": "@/components"
-    }
+  "style": "default",
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "src/app/globals.css",
+    "baseColor": "zinc",
+    "cssVariables": true
+  },
+  "rsc": false,
+  "aliases": {
+    "utils": "@/lib/utils",
+    "components": "@/components"
   }
+}
