@@ -6,6 +6,27 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
+const commonRules = {
+  "@typescript-eslint/naming-convention": [
+    "warn",
+    {
+      selector: "import",
+      format: ["camelCase", "PascalCase"],
+    },
+  ],
+  curly: ["warn", "multi-line"],
+  eqeqeq: "warn",
+  "no-throw-literal": "warn",
+  semi: "warn",
+  "@typescript-eslint/no-unused-vars": "off",
+};
+
+const commonTsConfig = {
+  parser: tsParser,
+  ecmaVersion: 2022,
+  sourceType: "module",
+};
+
 export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -13,30 +34,7 @@ export default tseslint.config(
     ignores: ["dist"],
   },
   {
-    files: ["**/*.{ts}"],
-    plugins: {},
-    languageOptions: {
-      parser: tsParser,
-      ecmaVersion: 2022,
-      sourceType: "module",
-    },
-    rules: {
-      "@typescript-eslint/naming-convention": [
-        "warn",
-        {
-          selector: "import",
-          format: ["camelCase", "PascalCase"],
-        },
-      ],
-      curly: "warn",
-      eqeqeq: "warn",
-      "no-throw-literal": "warn",
-      semi: "warn",
-    },
-  },
-  {
-    // These files are build scripts that are run by nodejs, and use commonjs
-    // syntax.
+    // Build scripts config - these are run by nodejs, and use commonjs syntax.
     files: ["esbuild.js", "**/tailwind.config.js"],
     languageOptions: {
       globals: globals.node,
@@ -46,7 +44,16 @@ export default tseslint.config(
     },
   },
   {
-    // Webview-specific config for React files
+    // Node.js TypeScript files (src/)
+    files: ["src/**/*.ts"],
+    languageOptions: {
+      ...commonTsConfig,
+      globals: globals.node,
+    },
+    rules: commonRules,
+  },
+  {
+    // Browser/React TypeScript files for the webview
     files: ["webview/src/**/*.{ts,tsx}"],
     plugins: {
       react: reactEslint,
@@ -54,6 +61,7 @@ export default tseslint.config(
       "react-refresh": reactRefresh,
     },
     languageOptions: {
+      ...commonTsConfig,
       globals: globals.browser,
     },
     settings: {
@@ -62,7 +70,7 @@ export default tseslint.config(
       },
     },
     rules: {
-      ...tseslint.configs.recommended.rules,
+      ...commonRules,
       ...reactHooks.configs.recommended.rules,
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
