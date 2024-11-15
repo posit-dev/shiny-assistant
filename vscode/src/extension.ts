@@ -11,8 +11,7 @@ export type State = {
   messages: Array<Message>;
 };
 
-// TODO: persist state across reloads
-const state: State = {
+let state: State = {
   messages: [
     { role: "system", content: "You are a helpful assistant." },
     { role: "assistant", content: "Hello! How can I help you today?" },
@@ -22,7 +21,13 @@ const state: State = {
 export function activate(context: vscode.ExtensionContext) {
   console.log("Shiny Assistant activated");
 
-  const provider = new ShinyAssistantViewProvider(context.extensionUri);
+  // Load saved state or use default
+  state = context.globalState.get<State>("chatState") || state;
+
+  const provider = new ShinyAssistantViewProvider(
+    context.extensionUri,
+    context,
+  );
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("shiny-assistant.view", provider),
@@ -35,7 +40,9 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-export function deactivate() {
+export function deactivate(context: vscode.ExtensionContext) {
+  // Save state on deactivation
+  context.globalState.update("chatState", state);
   console.log("Shiny Assistant deactivated");
 }
 
@@ -43,7 +50,10 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "shiny-assistant.view";
   private _view?: vscode.WebviewView;
 
-  constructor(private readonly extensionUri: vscode.Uri) {}
+  constructor(
+    private readonly extensionUri: vscode.Uri,
+    private readonly context: vscode.ExtensionContext,
+  ) {}
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
@@ -76,14 +86,13 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
           });
         } else if (message.type === "userMessage") {
           state.messages.push({ role: "user", content: message.content });
-          webviewView.webview.postMessage({
-            type: "currentState",
-            data: state,
-          });
+          this.context.globalState.update("chatState", state);
+
           // Simulate AI response with typing delay
           setTimeout(() => {
             const response = generateResponse(message.content);
             state.messages.push({ role: "assistant", content: response });
+            this.context.globalState.update("chatState", state);
             webviewView.webview.postMessage({
               type: "currentState",
               data: state,
@@ -93,8 +102,7 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
         console.log("Shiny Assistant extension received message: ", message);
       },
       undefined,
-      // TODO: Make subscriptions work
-      // _context.subscriptions
+      this.context.subscriptions
     );
   }
 
