@@ -12,7 +12,7 @@ export type State = {
 };
 
 // TODO: persist state across reloads
-let state: State = {
+const state: State = {
   messages: [
     { role: "system", content: "You are a helpful assistant." },
     { role: "assistant", content: "Hello! How can I help you today?" },
@@ -57,9 +57,8 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [this.extensionUri],
     };
 
-    webviewView.onDidChangeVisibility((e) => {
+    webviewView.onDidChangeVisibility(() => {
       console.log("Shiny Assistant webview visibility changed");
-      console.log(e);
     });
 
     webviewView.onDidDispose(() => {
@@ -70,6 +69,27 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage(
       (message) => {
+        if (message.type === "getState") {
+          webviewView.webview.postMessage({
+            type: "currentState",
+            data: state,
+          });
+        } else if (message.type === "userMessage") {
+          state.messages.push({ role: "user", content: message.content });
+          webviewView.webview.postMessage({
+            type: "currentState",
+            data: state,
+          });
+          // Simulate AI response with typing delay
+          setTimeout(() => {
+            const response = generateResponse(message.content);
+            state.messages.push({ role: "assistant", content: response });
+            webviewView.webview.postMessage({
+              type: "currentState",
+              data: state,
+            });
+          }, 1000);
+        }
         console.log("Shiny Assistant extension received message: ", message);
       },
       undefined,
@@ -131,3 +151,37 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
 `;
   }
 }
+
+// ========================================================
+// Utility functions
+// ========================================================
+const generateResponse = (input: string) => {
+  const lowerInput = input.toLowerCase();
+
+  // Basic response patterns
+  if (lowerInput.includes("hello") || lowerInput.includes("hi")) {
+    return "👋 Hello! Nice to meet you!";
+  }
+  if (lowerInput.includes("how are you")) {
+    return "I'm doing well, thank you for asking! How about you?";
+  }
+  if (lowerInput.includes("weather")) {
+    return "I'm sorry, I can't check the actual weather, but I hope it's nice where you are!";
+  }
+  if (lowerInput.includes("name")) {
+    return "I'm ChatBot, a simple demonstration AI!";
+  }
+  if (lowerInput.includes("bye") || lowerInput.includes("goodbye")) {
+    return "Goodbye! Have a great day! 👋";
+  }
+
+  // Default response formats
+  const responses = [
+    `You said: "${input}"`,
+    `I received your message: "${input}"`,
+    `Here's what you typed: "${input}"`,
+    `Your message was: "${input}"`,
+  ];
+
+  return responses[Math.floor(Math.random() * responses.length)];
+};

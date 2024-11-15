@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import type { Message } from "../../src/extension";
 
 const SendIcon = () => (
   <svg
@@ -18,6 +19,8 @@ const SendIcon = () => (
 
 const vscode = acquireVsCodeApi();
 
+vscode.postMessage({ type: "getState" });
+
 // Receive messages from the extension
 window.addEventListener("message", (event) => {
   const message = event.data; // The JSON data our extension sent
@@ -33,28 +36,29 @@ const sendMessageToExtension = (message: string) => {
 
 const ChatMessage = ({
   message,
-  isUser,
+  role,
 }: {
   message: string;
-  isUser: boolean;
-}) => (
-  <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
-    <div
-      className={`rounded-lg px-4 py-2 max-w-[80%] ${
-        isUser ? "bg-blue-500 text-white" : "bg-gray-100"
-      }`}
-    >
-      <p className="text-sm">{message}</p>
+  role: "assistant" | "user";
+}) => {
+  const isUser = role === "user";
+  return (
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
+      <div
+        className={`rounded-lg px-4 py-2 max-w-[80%] ${
+          isUser ? "bg-blue-500 text-white" : "bg-gray-100"
+        }`}
+      >
+        <p className="text-sm">{message}</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ChatApp = () => {
-  const [messages, setMessages] = useState([
-    { text: "Hello! I'm a simple chat bot. Try saying hello!", isUser: false },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -65,54 +69,51 @@ const ChatApp = () => {
     scrollToBottom();
   }, [messages]);
 
-  const generateResponse = (input: string) => {
-    const lowerInput = input.toLowerCase();
+  useEffect(() => {
+    // Event listener for messages from extension
+    const messageHandler = (event: MessageEvent) => {
+      const msg = event.data;
 
-    // Basic response patterns
-    if (lowerInput.includes("hello") || lowerInput.includes("hi")) {
-      return "👋 Hello! Nice to meet you!";
-    }
-    if (lowerInput.includes("how are you")) {
-      return "I'm doing well, thank you for asking! How about you?";
-    }
-    if (lowerInput.includes("weather")) {
-      return "I'm sorry, I can't check the actual weather, but I hope it's nice where you are!";
-    }
-    if (lowerInput.includes("name")) {
-      return "I'm ChatBot, a simple demonstration AI!";
-    }
-    if (lowerInput.includes("bye") || lowerInput.includes("goodbye")) {
-      return "Goodbye! Have a great day! 👋";
-    }
+      if (msg.type === "currentState") {
+        console.log("Received current state: ", msg.data);
+        setMessages(msg.data.messages);
+        // If the last message is _not_ a user message, set isThinking to false.
+        if (
+          msg.data.messages &&
+          msg.data.messages[msg.data.messages.length - 1].role !== "user"
+        ) {
+          setIsThinking(false);
+        }
+      } else {
+        console.log("Webview received message: ", msg);
+      }
+    };
 
-    // Default response formats
-    const responses = [
-      `You said: "${input}"`,
-      `I received your message: "${input}"`,
-      `Here's what you typed: "${input}"`,
-      `Your message was: "${input}"`,
-    ];
+    window.addEventListener("message", messageHandler);
 
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
+    // Cleanup function to remove event listener
+    return () => {
+      window.removeEventListener("message", messageHandler);
+    };
+  }, [messages]);
 
   const sendMessage = () => {
     if (!inputText.trim()) return;
 
+    const userInputMessage: Message = {
+      content: inputText,
+      role: "user",
+    };
+
     // Add user message
-    const newMessages = [...messages, { text: inputText, isUser: true }];
+    const newMessages: Array<Message> = [...messages, userInputMessage];
+    console.log("setting messages from input", newMessages);
     setMessages(newMessages);
     setInputText("");
-    setIsTyping(true);
+    setIsThinking(true);
 
     sendMessageToExtension(inputText);
-
-    // Simulate AI response with typing delay
-    setTimeout(() => {
-      const response = generateResponse(inputText);
-      setMessages((prev) => [...prev, { text: response, isUser: false }]);
-      setIsTyping(false);
-    }, 1000);
+    vscode.postMessage({ type: "newUserMessage", content: userInputMessage });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -130,15 +131,21 @@ const ChatApp = () => {
   return (
     <>
       <div className="h-96 overflow-y-auto mb-4 p-4">
-        {messages.map((message, index) => (
-          <ChatMessage
-            key={index}
-            message={message.text}
-            isUser={message.isUser}
-          />
-        ))}
-        {isTyping && (
-          <div className="text-sm text-gray-500 italic">Bot is typing...</div>
+        {messages
+          .filter((message) => {
+            return message.role === "user" || message.role === "assistant";
+          })
+          .map((message, index) => {
+            return (
+              <ChatMessage
+                key={index}
+                message={message.content}
+                role={message.role as "assistant" | "user"}
+              />
+            );
+          })}
+        {isThinking && (
+          <div className="text-sm text-gray-500 italic">Bot is thinking...</div>
         )}
         <div ref={messagesEndRef} />
       </div>
