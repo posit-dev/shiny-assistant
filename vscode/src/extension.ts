@@ -1,5 +1,24 @@
 import * as vscode from "vscode";
 
+console.log("Shiny Assistant extension loaded");
+
+export type Message = {
+  role: "system" | "assistant" | "user";
+  content: string;
+};
+
+export type State = {
+  messages: Array<Message>;
+};
+
+// TODO: persist state across reloads
+let state: State = {
+  messages: [
+    { role: "system", content: "You are a helpful assistant." },
+    { role: "assistant", content: "Hello! How can I help you today?" },
+  ],
+};
+
 export function activate(context: vscode.ExtensionContext) {
   console.log("Shiny Assistant activated");
 
