@@ -33,10 +33,20 @@
     },
     "commands": [
       {
-        "command": "shiny-assistant.sendMessage",
-        "title": "Send message to webview"
+        "command": "shiny-assistant.clearChat",
+        "title": "Clear Chat",
+        "icon": "$(trash)"
       }
-    ]
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "shiny-assistant.clearChat",
+          "when": "view == shiny-assistant.view",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",

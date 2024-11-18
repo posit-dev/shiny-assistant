@@ -40,6 +40,12 @@ export function activate(context: vscode.ExtensionContext) {
       provider.sendMessage("Hello from Shiny Assistant!");
     }),
   );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("shiny-assistant.clearChat", () => {
+      provider.clearChat();
+    }),
+  );
 }
 
 export function deactivate(context: vscode.ExtensionContext) {
@@ -139,7 +145,7 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
     ].join("; ");
 
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="height: 100%">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -147,17 +153,21 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
     <title>Shiny Assistant</title>
     <link href="${styleUri}" rel="stylesheet">
     <style>
-    body {
-      padding: 0px;
-    }
+      body {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+      }
+      #root {
+        height: 100%;
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="${scriptUri}"></script>
   </body>
-</html>
-`;
+</html>`;
   }
 
   public clearChat() {
