@@ -176,7 +176,7 @@ const ChatApp = () => {
         <button
           type="button"
           onClick={sendMessage}
-          className="p-1 input-send-button rounded-md"
+          className="p-1 input-send-button rounded-sm"
           disabled={!inputText.trim()}
         >
           <SendIcon />
