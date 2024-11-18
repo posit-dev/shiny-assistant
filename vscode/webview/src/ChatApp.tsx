@@ -57,6 +57,7 @@ const ChatApp = () => {
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasUserMessages = messages.some((message) => message.role === "user");
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -142,35 +143,39 @@ const ChatApp = () => {
   };
 
   return (
-    <div className="flex flex-col h-full p-1 pt-2">
-      <div className="flex-1 overflow-y-auto">
-        {messages
-          .filter((message) => {
-            return message.role === "user" || message.role === "assistant";
-          })
-          .map((message, index) => {
-            return (
-              <ChatMessage
-                key={index}
-                message={message.content}
-                role={message.role as "assistant" | "user"}
-              />
-            );
-          })}
-        {isThinking && (
-          <div className="text-gray-500 italic">Bot is thinking...</div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+    <div
+      className={`flex flex-col h-full p-1 pt-2 ${hasUserMessages ? "" : "justify-start"}`}
+    >
+      {hasUserMessages && (
+        <div className={"flex-1 overflow-y-auto"}>
+          {messages
+            .filter((message) => {
+              return message.role === "user" || message.role === "assistant";
+            })
+            .map((message, index) => {
+              return (
+                <ChatMessage
+                  key={index}
+                  message={message.content}
+                  role={message.role as "assistant" | "user"}
+                />
+              );
+            })}
+          {isThinking && (
+            <div className="text-gray-500 italic">Bot is thinking...</div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      )}
 
-      <form onSubmit={handleSubmit} className="flex gap-1">
+      <form onSubmit={handleSubmit} className={`flex gap-1`}>
         <textarea
           ref={textareaRef}
           value={inputText}
           onChange={handleTextareaChange}
           onKeyDown={handleKeyDown}
           placeholder="Type your message..."
-          className="flex-1 px-2 py-1 input-textbox"
+          className="flex-1 px-2 py-1 rounded-sm input-textbox"
           rows={1}
         />
         <button

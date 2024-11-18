@@ -13,7 +13,6 @@ export type State = {
 
 const newChatMessages: Array<Message> = [
   { role: "system", content: "You are a helpful assistant." },
-  { role: "assistant", content: "Hello! How can I help you today?" },
 ];
 
 let state: State = {
