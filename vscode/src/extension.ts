@@ -11,11 +11,13 @@ export type State = {
   messages: Array<Message>;
 };
 
+const newChatMessages: Array<Message> = [
+  { role: "system", content: "You are a helpful assistant." },
+  { role: "assistant", content: "Hello! How can I help you today?" },
+];
+
 let state: State = {
-  messages: [
-    { role: "system", content: "You are a helpful assistant." },
-    { role: "assistant", content: "Hello! How can I help you today?" },
-  ],
+  messages: structuredClone(newChatMessages),
 };
 
 export function activate(context: vscode.ExtensionContext) {
@@ -48,7 +50,7 @@ export function deactivate(context: vscode.ExtensionContext) {
 
 class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "shiny-assistant.view";
-  private _view?: vscode.WebviewView;
+  public _view?: vscode.WebviewView;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -93,16 +95,15 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
             const response = generateResponse(message.content);
             state.messages.push({ role: "assistant", content: response });
             this.context.globalState.update("chatState", state);
-            webviewView.webview.postMessage({
-              type: "currentState",
-              data: state,
-            });
+            this.sendCurrentState();
           }, 1000);
+        } else if (message.type === "clearChat") {
+          this.clearChat();
         }
         console.log("Shiny Assistant extension received message: ", message);
       },
       undefined,
-      this.context.subscriptions
+      this.context.subscriptions,
     );
   }
 
@@ -157,6 +158,20 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
   </body>
 </html>
 `;
+  }
+
+  public clearChat() {
+    state.messages = structuredClone(newChatMessages);
+    this.context.globalState.update("chatState", state);
+
+    this.sendCurrentState();
+  }
+
+  public sendCurrentState() {
+    this._view?.webview.postMessage({
+      type: "currentState",
+      data: state,
+    });
   }
 }
 
