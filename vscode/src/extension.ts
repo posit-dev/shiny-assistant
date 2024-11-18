@@ -35,12 +35,6 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("shiny-assistant.sendMessage", () => {
-      provider.sendMessage("Hello from Shiny Assistant!");
-    }),
-  );
-
-  context.subscriptions.push(
     vscode.commands.registerCommand("shiny-assistant.clearChat", () => {
       provider.clearChat();
     }),
