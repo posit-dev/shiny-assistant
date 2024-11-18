@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import type { Message } from "../../src/extension";
+import type { Message, ToWebviewStateMessage } from "../../src/extension";
 
 const SendIcon = () => (
   <svg
@@ -24,9 +24,6 @@ vscode.postMessage({ type: "getState" });
 // Receive messages from the extension
 window.addEventListener("message", (event) => {
   const message = event.data; // The JSON data our extension sent
-
-  console.log(event);
-  console.log("Webview received message: ", message);
 });
 
 // Send messages to the extension
@@ -55,6 +52,7 @@ const ChatApp = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasUserMessages = messages.some((message) => message.role === "user");
@@ -79,9 +77,9 @@ const ChatApp = () => {
       const msg = event.data;
 
       if (msg.type === "currentState") {
-        console.log("Received current state: ", msg.data);
-        setMessages(msg.data.messages);
-        // If the last message is _not_ a user message, set isThinking to false.
+        const data = msg.data as ToWebviewStateMessage;
+        setMessages(data.messages);
+        setHasApiKey(data.hasApiKey);
         if (
           msg.data.messages &&
           msg.data.messages[msg.data.messages.length - 1].role !== "user"
@@ -111,7 +109,6 @@ const ChatApp = () => {
 
     // Add user message
     const newMessages: Array<Message> = [...messages, userInputMessage];
-    console.log("setting messages from input", newMessages);
     setMessages(newMessages);
     setInputText("");
     setIsThinking(true);
@@ -146,47 +143,63 @@ const ChatApp = () => {
     <div
       className={`flex flex-col h-full p-1 pt-2 ${hasUserMessages ? "" : "justify-start"}`}
     >
-      {hasUserMessages && (
-        <div className={"flex-1 overflow-y-auto"}>
-          {messages
-            .filter((message) => {
-              return message.role === "user" || message.role === "assistant";
-            })
-            .map((message, index) => {
-              return (
-                <ChatMessage
-                  key={index}
-                  message={message.content}
-                  role={message.role as "assistant" | "user"}
-                />
-              );
-            })}
-          {isThinking && (
-            <div className="text-gray-500 italic">Bot is thinking...</div>
-          )}
-          <div ref={messagesEndRef} />
+      {!hasApiKey ? (
+        <div className="text-center p-4">
+          <p>
+            To use Shiny Assistant, please set your Anthropic API key in VS Code
+            settings:
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Settings → Extensions → Shiny Assistant → Anthropic API Key
+          </p>
         </div>
-      )}
+      ) : (
+        <>
+          {hasUserMessages && (
+            <div className={"flex-1 overflow-y-auto"}>
+              {messages
+                .filter((message) => {
+                  return (
+                    message.role === "user" || message.role === "assistant"
+                  );
+                })
+                .map((message, index) => {
+                  return (
+                    <ChatMessage
+                      key={index}
+                      message={message.content}
+                      role={message.role as "assistant" | "user"}
+                    />
+                  );
+                })}
+              {isThinking && (
+                <div className="text-gray-500 italic">Bot is thinking...</div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
 
-      <form onSubmit={handleSubmit} className={`flex gap-1`}>
-        <textarea
-          ref={textareaRef}
-          value={inputText}
-          onChange={handleTextareaChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Type your message..."
-          className="flex-1 px-2 py-1 rounded-sm input-textbox"
-          rows={1}
-        />
-        <button
-          type="button"
-          onClick={sendMessage}
-          className="p-1 input-send-button rounded-sm"
-          disabled={!inputText.trim()}
-        >
-          <SendIcon />
-        </button>
-      </form>
+          <form onSubmit={handleSubmit} className={`flex gap-1`}>
+            <textarea
+              ref={textareaRef}
+              value={inputText}
+              onChange={handleTextareaChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your message..."
+              className="flex-1 px-2 py-1 rounded-sm input-textbox"
+              rows={1}
+            />
+            <button
+              type="button"
+              onClick={sendMessage}
+              className="p-1 input-send-button rounded-sm"
+              disabled={!inputText.trim()}
+            >
+              <SendIcon />
+            </button>
+          </form>
+        </>
+      )}
     </div>
   );
 };

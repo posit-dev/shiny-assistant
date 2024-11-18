@@ -1,33 +1,66 @@
 import * as vscode from "vscode";
 
-console.log("Shiny Assistant extension loaded");
-
 export type Message = {
   role: "system" | "assistant" | "user";
   content: string;
 };
 
-export type State = {
+// The state of the extension
+type ExtensionState = {
+  messages: Array<Message>;
+  anthropicApiKey: string;
+};
+
+// The state that is persisted across restarts.
+type PersistentExtensionState = {
   messages: Array<Message>;
 };
 
-const newChatMessages: Array<Message> = [
+// The state that is sent to the webview. This is a subset of the extension
+// state. In the future it might not be a strict subset; it might have some
+// different information, like if the user's view of the messages is different
+// from the actual messages sent to the LLM.
+export type ToWebviewStateMessage = {
+  messages: Array<Message>;
+  hasApiKey: boolean;
+};
+
+// The chat messages that are shown with a new chat.
+const initialChatMessages: Array<Message> = [
   { role: "system", content: "You are a helpful assistant." },
 ];
 
-let state: State = {
-  messages: structuredClone(newChatMessages),
+let state: ExtensionState = {
+  messages: structuredClone(initialChatMessages),
+  anthropicApiKey: "",
 };
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log("Shiny Assistant activated");
-
   // Load saved state or use default
-  state = context.globalState.get<State>("chatState") || state;
+  state = context.globalState.get<ExtensionState>("extensionState") || state;
+
+  // Load API key from configuration
+  state.anthropicApiKey =
+    vscode.workspace
+      .getConfiguration("shinyAssistant")
+      .get("anthropicApiKey") || "";
 
   const provider = new ShinyAssistantViewProvider(
     context.extensionUri,
     context,
+  );
+
+  // Add configuration change listener
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("shinyAssistant.anthropicApiKey")) {
+        state.anthropicApiKey =
+          vscode.workspace
+            .getConfiguration("shinyAssistant")
+            .get("anthropicApiKey") || "";
+        provider.sendCurrentState();
+      }
+    }),
   );
 
   context.subscriptions.push(
@@ -42,9 +75,15 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate(context: vscode.ExtensionContext) {
-  // Save state on deactivation
-  context.globalState.update("chatState", state);
-  console.log("Shiny Assistant deactivated");
+  persistState(context);
+}
+
+function persistState(context: vscode.ExtensionContext) {
+  const persistentState: PersistentExtensionState = {
+    messages: state.messages,
+  };
+
+  context.globalState.update("persistentState", persistentState);
 }
 
 class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
@@ -81,19 +120,16 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(
       (message) => {
         if (message.type === "getState") {
-          webviewView.webview.postMessage({
-            type: "currentState",
-            data: state,
-          });
+          this.sendCurrentState();
         } else if (message.type === "userMessage") {
           state.messages.push({ role: "user", content: message.content });
-          this.context.globalState.update("chatState", state);
+          persistState(this.context);
 
           // Simulate AI response with typing delay
           setTimeout(() => {
             const response = generateResponse(message.content);
             state.messages.push({ role: "assistant", content: response });
-            this.context.globalState.update("chatState", state);
+            persistState(this.context);
             this.sendCurrentState();
           }, 1000);
         }
@@ -162,16 +198,21 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
   }
 
   public clearChat() {
-    state.messages = structuredClone(newChatMessages);
-    this.context.globalState.update("chatState", state);
+    state.messages = structuredClone(initialChatMessages);
+    persistState(this.context);
 
     this.sendCurrentState();
   }
 
   public sendCurrentState() {
+    const webviewState: ToWebviewStateMessage = {
+      messages: state.messages,
+      hasApiKey: state.anthropicApiKey !== "",
+    };
+
     this._view?.webview.postMessage({
       type: "currentState",
-      data: state,
+      data: webviewState,
     });
   }
 }

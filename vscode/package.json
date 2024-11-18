@@ -31,6 +31,18 @@
         }
       ]
     },
+    "configuration": {
+      "title": "Shiny Assistant",
+      "properties": {
+        "shinyAssistant.anthropicApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Anthropic API key",
+          "scope": "application",
+          "password": true
+        }
+      }
+    },
     "commands": [
       {
         "command": "shiny-assistant.clearChat",
