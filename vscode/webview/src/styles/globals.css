@@ -18,9 +18,15 @@
       background-color: var(--vscode-input-background);
       color: var(--vscode-input-foreground);
       border: 1px solid var(--vscode-input-border);
+      max-height: 200px;
+      resize: none;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+    .input-textbox:focus {
+      outline-color: var(--vscode-focusBorder);
     }
     .input-send-button {
-      background-color: var(--vscode-button-secondaryBackground);
       color: var(--vscode-button-secondaryForeground);
     }
     .input-send-button:hover {

@@ -103,8 +103,6 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
             this.context.globalState.update("chatState", state);
             this.sendCurrentState();
           }, 1000);
-        } else if (message.type === "clearChat") {
-          this.clearChat();
         }
         console.log("Shiny Assistant extension received message: ", message);
       },

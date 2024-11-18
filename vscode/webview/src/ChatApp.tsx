@@ -56,6 +56,13 @@ const ChatApp = () => {
   const [inputText, setInputText] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      adjustTextareaHeight(textareaRef.current);
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -117,15 +124,21 @@ const ChatApp = () => {
     sendMessage();
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   };
 
-  const clearChat = () => {
-    vscode.postMessage({ type: "clearChat" });
+  const adjustTextareaHeight = (element: HTMLTextAreaElement) => {
+    element.style.height = "1px";
+    element.style.height = `${element.scrollHeight + 2}px`;
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputText(e.target.value);
+    adjustTextareaHeight(e.target);
   };
 
   return (
@@ -151,18 +164,19 @@ const ChatApp = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="flex gap-1">
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
           value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onChange={handleTextareaChange}
+          onKeyDown={handleKeyDown}
           placeholder="Type your message..."
           className="flex-1 px-2 py-1 input-textbox"
+          rows={1}
         />
         <button
           type="button"
           onClick={sendMessage}
-          className="p-2 input-send-button"
+          className="p-1 input-send-button rounded-md"
           disabled={!inputText.trim()}
         >
           <SendIcon />
