@@ -39,7 +39,7 @@ let state: ExtensionState = {
 
 export function activate(context: vscode.ExtensionContext) {
   // Load saved state or use default
-  state = context.globalState.get<ExtensionState>("extensionState") || state;
+  state = context.globalState.get<ExtensionState>("persistentState") || state;
 
   // Load API key from configuration
   state.anthropicApiKey =
