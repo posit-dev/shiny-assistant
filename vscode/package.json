@@ -40,6 +40,20 @@
           "description": "Anthropic API key",
           "scope": "application",
           "password": true
+        },
+        "shinyAssistant.anthropicModel": {
+          "type": "string",
+          "enum": [
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-haiku-20241022"
+          ],
+          "default": "claude-3-5-sonnet-20241022",
+          "description": "Anthropic model to use",
+          "scope": "application",
+          "enumItemLabels": [
+            "Claude 3.5 Sonnet (2024-10-22)",
+            "Claude 3.5 Haiku (2024-10-22)"
+          ]
         }
       }
     },

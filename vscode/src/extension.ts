@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { TextBlock } from "@anthropic-ai/sdk/resources/messages";
+import type { Model, TextBlock } from "@anthropic-ai/sdk/resources/messages";
 import * as vscode from "vscode";
 
 export type Message = {
@@ -131,13 +131,16 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
           // TODO:
           // Abstract into function
           // Make receive message handler async?
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           (async () => {
             const anthropic = new Anthropic({
               apiKey: state.anthropicApiKey,
             });
 
             const msg = await anthropic.messages.create({
-              model: "claude-3-5-sonnet-20241022",
+              model: vscode.workspace
+                .getConfiguration("shinyAssistant")
+                .get("anthropicModel") as Model,
               max_tokens: 1024,
               system: systemPrompt,
               messages: state.messages,
