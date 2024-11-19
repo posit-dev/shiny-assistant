@@ -230,10 +230,9 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
       apiKey: state.anthropicApiKey,
     });
 
+    state.messages.push({ role: "user", content: message });
     // Create a placeholder for the assistant's message
     const assistantMessage: Message = { role: "assistant", content: "" };
-    state.messages.push({ role: "user", content: message });
-    state.messages.push(assistantMessage);
 
     try {
       const stream = await anthropic.messages.create({
@@ -242,7 +241,7 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
           .get("anthropicModel") as Model,
         max_tokens: 1024,
         system: systemPrompt,
-        messages: state.messages.slice(0, -1), // Exclude the empty assistant message
+        messages: state.messages,
         stream: true,
       });
 
@@ -259,12 +258,13 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
         this._view?.webview.postMessage({
           type: "streamContent",
           data: {
-            messageIndex: state.messages.length - 1,
+            messageIndex: state.messages.length,
             content: assistantMessage.content,
           },
         });
       }
 
+      state.messages.push(assistantMessage);
       saveState(this.context);
     } catch (error) {
       console.error("Error:", error);
