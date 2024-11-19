@@ -123,7 +123,7 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
       (message) => {
         if (message.type === "getState") {
           this.sendCurrentStateToWebView();
-        } else if (message.type === "userMessage") {
+        } else if (message.type === "userInput") {
           state.messages.push({ role: "user", content: message.content });
           persistState(this.context);
 

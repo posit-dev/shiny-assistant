@@ -19,11 +19,12 @@ const SendIcon = () => (
 
 const vscode = acquireVsCodeApi();
 
+// When the webview loads, ask the extension for the current state
 vscode.postMessage({ type: "getState" });
 
 // Send messages to the extension
 const sendMessageToExtension = (message: string) => {
-  vscode.postMessage({ type: "userMessage", content: message });
+  vscode.postMessage({ type: "userInput", content: message });
 };
 
 const ChatMessage = ({
@@ -55,6 +56,7 @@ const ChatApp = () => {
   const hasUserMessages = messages.some((message) => message.role === "user");
 
   useEffect(() => {
+    // On load, adjust the textarea height.
     if (textareaRef.current) {
       adjustTextareaHeight(textareaRef.current);
     }
@@ -111,7 +113,6 @@ const ChatApp = () => {
     setIsThinking(true);
 
     sendMessageToExtension(inputText);
-    vscode.postMessage({ type: "newUserMessage", content: userInputMessage });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
