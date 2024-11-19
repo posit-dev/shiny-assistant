@@ -21,11 +21,6 @@ const vscode = acquireVsCodeApi();
 
 vscode.postMessage({ type: "getState" });
 
-// Receive messages from the extension
-window.addEventListener("message", (event) => {
-  const message = event.data; // The JSON data our extension sent
-});
-
 // Send messages to the extension
 const sendMessageToExtension = (message: string) => {
   vscode.postMessage({ type: "userMessage", content: message });

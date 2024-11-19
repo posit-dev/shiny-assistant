@@ -19,12 +19,22 @@ const commonRules = {
   "no-throw-literal": "warn",
   semi: "warn",
   "@typescript-eslint/no-unused-vars": "off",
+  "@typescript-eslint/consistent-type-imports": "warn",
+  "@typescript-eslint/no-floating-promises": "error",
 };
 
 const commonTsConfig = {
   parser: tsParser,
   ecmaVersion: 2022,
   sourceType: "module",
+  parserOptions: {
+    ecmaVersion: 2022,
+    sourceType: "module",
+    project: "./tsconfig.json",
+    ecmaFeatures: {
+      jsx: true,
+    },
+  },
 };
 
 export default tseslint.config(
@@ -63,6 +73,10 @@ export default tseslint.config(
     languageOptions: {
       ...commonTsConfig,
       globals: globals.browser,
+      parserOptions: {
+        ...commonTsConfig.parserOptions,
+        project: "./webview/tsconfig.json",
+      },
     },
     settings: {
       react: {
