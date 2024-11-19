@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import type { Message, ToWebviewStateMessage } from "../../src/extension";
 
 const SendIcon = () => (
@@ -36,11 +37,15 @@ const ChatMessage = ({
 }) => {
   const isUser = role === "user";
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-2`}>
+    <div className={`${isUser ? "justify-end" : "justify-start"} mb-2`}>
       <div
-        className={`px-2 py-1 ${isUser ? "msg-user rounded-sm" : "msg-assistant"}`}
+        className={`py-1 mx-2 ${isUser ? "msg-user px-2 rounded-sm" : "msg-assistant"}`}
       >
-        <p>{message}</p>
+        {role === "assistant" ? (
+          <ReactMarkdown>{message}</ReactMarkdown>
+        ) : (
+          <p>{message}</p>
+        )}
       </div>
     </div>
   );
@@ -71,7 +76,6 @@ const ChatApp = () => {
   }, [messages]);
 
   useEffect(() => {
-    // Event listener for messages from extension
     const messageHandler = (event: MessageEvent) => {
       const msg = event.data;
 
@@ -80,13 +84,26 @@ const ChatApp = () => {
         setMessages(data.messages);
         setHasApiKey(data.hasApiKey);
         if (
-          msg.data.messages &&
-          msg.data.messages[msg.data.messages.length - 1].role !== "user"
+          data.messages.length > 0 &&
+          data.messages[data.messages.length - 1].role !== "user"
         ) {
           setIsThinking(false);
         }
+      } else if (msg.type === "streamContent") {
+        setMessages((prevMessages) => {
+          const newMessages = [...prevMessages];
+          if (newMessages.length < msg.data.messageIndex + 1) {
+            newMessages.push({
+              content: "",
+              role: "assistant",
+            });
+          }
+          newMessages[msg.data.messageIndex].content = msg.data.content;
+          return newMessages;
+        });
+        setIsThinking(false);
       } else {
-        console.log("Webview received message: ", msg);
+        console.log("Webview received unknown message: ", msg);
       }
     };
 

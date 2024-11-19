@@ -1,5 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { Model, TextBlock } from "@anthropic-ai/sdk/resources/messages";
+import type {
+  Model,
+  TextBlock,
+  TextDelta,
+} from "@anthropic-ai/sdk/resources/messages";
 import * as vscode from "vscode";
 
 export type Message = {
@@ -27,7 +31,14 @@ export type ToWebviewStateMessage = {
   hasApiKey: boolean;
 };
 
-const systemPrompt = "You are a helpful assistant.";
+const systemPrompt = `You are a coding assistant that generates Python code.
+
+You are given a user's prompt and a codebase.
+
+You will generate Python code that satisfies the user's prompt.
+
+Put the generated code in triple backticks.
+`;
 
 // The chat messages that are shown with a new chat.
 const initialChatMessages: Array<Message> = [];
@@ -124,37 +135,14 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
         if (message.type === "getState") {
           this.sendCurrentStateToWebView();
         } else if (message.type === "userInput") {
-          state.messages.push({ role: "user", content: message.content });
-          saveState(this.context);
-
-          // Send message to Anthropic
-          // TODO:
-          // Abstract into function
-          // Make receive message handler async?
           // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          (async () => {
-            const anthropic = new Anthropic({
-              apiKey: state.anthropicApiKey,
-            });
-
-            const msg = await anthropic.messages.create({
-              model: vscode.workspace
-                .getConfiguration("shinyAssistant")
-                .get("anthropicModel") as Model,
-              max_tokens: 1024,
-              system: systemPrompt,
-              messages: state.messages,
-            });
-
-            const response = (msg.content[0] as TextBlock).text;
-
-            state.messages.push({ role: "assistant", content: response });
-            saveState(this.context);
-
-            this.sendCurrentStateToWebView();
-          })();
+          this.handleUserInput(message.content);
+        } else {
+          console.log(
+            "Shiny Assistant extension received message with unknown type: ",
+            message,
+          );
         }
-        console.log("Shiny Assistant extension received message: ", message);
       },
       undefined,
       this.context.subscriptions,
@@ -235,5 +223,52 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
       type: "currentState",
       data: webviewState,
     });
+  }
+
+  private async handleUserInput(message: string) {
+    const anthropic = new Anthropic({
+      apiKey: state.anthropicApiKey,
+    });
+
+    // Create a placeholder for the assistant's message
+    const assistantMessage: Message = { role: "assistant", content: "" };
+    state.messages.push({ role: "user", content: message });
+    state.messages.push(assistantMessage);
+
+    try {
+      const stream = await anthropic.messages.create({
+        model: vscode.workspace
+          .getConfiguration("shinyAssistant")
+          .get("anthropicModel") as Model,
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: state.messages.slice(0, -1), // Exclude the empty assistant message
+        stream: true,
+      });
+
+      for await (const chunk of stream) {
+        // TODO: Check for start and stop events, and also send them along.
+        // if chunk is a message delta, update the assistant's message
+        if (chunk.type === "content_block_delta") {
+          if (chunk.delta.type === "text_delta") {
+            assistantMessage.content += chunk.delta.text;
+          }
+        }
+
+        // Send the streaming update to the webview
+        this._view?.webview.postMessage({
+          type: "streamContent",
+          data: {
+            messageIndex: state.messages.length - 1,
+            content: assistantMessage.content,
+          },
+        });
+      }
+
+      saveState(this.context);
+    } catch (error) {
+      console.error("Error:", error);
+      // Handle error appropriately
+    }
   }
 }
