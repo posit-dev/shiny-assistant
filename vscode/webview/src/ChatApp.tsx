@@ -41,7 +41,9 @@ const ChatMessage = ({
   const isUser = role === "user";
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-2`}>
-      <div className={`px-2 py-1 ${isUser ? "msg-user" : "msg-assistant"}`}>
+      <div
+        className={`px-2 py-1 ${isUser ? "msg-user rounded-sm" : "msg-assistant"}`}
+      >
         <p>{message}</p>
       </div>
     </div>
@@ -189,14 +191,16 @@ const ChatApp = () => {
               className="flex-1 px-2 py-1 rounded-sm input-textbox"
               rows={1}
             />
-            <button
-              type="button"
-              onClick={sendMessage}
-              className="p-1 input-send-button rounded-sm"
-              disabled={!inputText.trim()}
-            >
-              <SendIcon />
-            </button>
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={sendMessage}
+                className="p-1 input-send-button rounded-sm"
+                disabled={!inputText.trim()}
+              >
+                <SendIcon />
+              </button>
+            </div>
           </form>
         </>
       )}
