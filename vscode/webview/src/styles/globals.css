@@ -46,4 +46,8 @@
     font-family: var(--vscode-editor-font-family);
     background-color: unset; /* Need to override the default background color */
   }
+  li,
+  ul {
+    list-style: inside;
+  }
 }
