@@ -1,7 +1,9 @@
+import Anthropic from "@anthropic-ai/sdk";
+import { TextBlock } from "@anthropic-ai/sdk/resources/messages";
 import * as vscode from "vscode";
 
 export type Message = {
-  role: "system" | "assistant" | "user";
+  role: "assistant" | "user";
   content: string;
 };
 
@@ -25,10 +27,10 @@ export type ToWebviewStateMessage = {
   hasApiKey: boolean;
 };
 
+const systemPrompt = "You are a helpful assistant.";
+
 // The chat messages that are shown with a new chat.
-const initialChatMessages: Array<Message> = [
-  { role: "system", content: "You are a helpful assistant." },
-];
+const initialChatMessages: Array<Message> = [];
 
 let state: ExtensionState = {
   messages: structuredClone(initialChatMessages),
@@ -58,7 +60,7 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.workspace
             .getConfiguration("shinyAssistant")
             .get("anthropicApiKey") || "";
-        provider.sendCurrentState();
+        provider.sendCurrentStateToWebView();
       }
     }),
   );
@@ -120,18 +122,34 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(
       (message) => {
         if (message.type === "getState") {
-          this.sendCurrentState();
+          this.sendCurrentStateToWebView();
         } else if (message.type === "userMessage") {
           state.messages.push({ role: "user", content: message.content });
           persistState(this.context);
 
-          // Simulate AI response with typing delay
-          setTimeout(() => {
-            const response = generateResponse(message.content);
+          // Send message to Anthropic
+          // TODO:
+          // Abstract into function
+          // Make receive message handler async?
+          (async () => {
+            const anthropic = new Anthropic({
+              apiKey: state.anthropicApiKey,
+            });
+
+            const msg = await anthropic.messages.create({
+              model: "claude-3-5-sonnet-20241022",
+              max_tokens: 1024,
+              system: systemPrompt,
+              messages: state.messages,
+            });
+
+            const response = (msg.content[0] as TextBlock).text;
+
             state.messages.push({ role: "assistant", content: response });
             persistState(this.context);
-            this.sendCurrentState();
-          }, 1000);
+
+            this.sendCurrentStateToWebView();
+          })();
         }
         console.log("Shiny Assistant extension received message: ", message);
       },
@@ -201,10 +219,10 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
     state.messages = structuredClone(initialChatMessages);
     persistState(this.context);
 
-    this.sendCurrentState();
+    this.sendCurrentStateToWebView();
   }
 
-  public sendCurrentState() {
+  public sendCurrentStateToWebView() {
     const webviewState: ToWebviewStateMessage = {
       messages: state.messages,
       hasApiKey: state.anthropicApiKey !== "",
@@ -216,37 +234,3 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
     });
   }
 }
-
-// ========================================================
-// Utility functions
-// ========================================================
-const generateResponse = (input: string) => {
-  const lowerInput = input.toLowerCase();
-
-  // Basic response patterns
-  if (lowerInput.includes("hello") || lowerInput.includes("hi")) {
-    return "👋 Hello! Nice to meet you!";
-  }
-  if (lowerInput.includes("how are you")) {
-    return "I'm doing well, thank you for asking! How about you?";
-  }
-  if (lowerInput.includes("weather")) {
-    return "I'm sorry, I can't check the actual weather, but I hope it's nice where you are!";
-  }
-  if (lowerInput.includes("name")) {
-    return "I'm ChatBot, a simple demonstration AI!";
-  }
-  if (lowerInput.includes("bye") || lowerInput.includes("goodbye")) {
-    return "Goodbye! Have a great day! 👋";
-  }
-
-  // Default response formats
-  const responses = [
-    `You said: "${input}"`,
-    `I received your message: "${input}"`,
-    `Here's what you typed: "${input}"`,
-    `Your message was: "${input}"`,
-  ];
-
-  return responses[Math.floor(Math.random() * responses.length)];
-};
