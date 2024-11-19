@@ -14,7 +14,7 @@ type ExtensionState = {
 };
 
 // The state that is persisted across restarts.
-type PersistentExtensionState = {
+type ExtensionSaveState = {
   messages: Array<Message>;
 };
 
@@ -39,7 +39,7 @@ let state: ExtensionState = {
 
 export function activate(context: vscode.ExtensionContext) {
   // Load saved state or use default
-  state = context.globalState.get<ExtensionState>("persistentState") || state;
+  state = context.globalState.get<ExtensionState>("savedState") || state;
 
   // Load API key from configuration
   state.anthropicApiKey =
@@ -77,15 +77,15 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate(context: vscode.ExtensionContext) {
-  persistState(context);
+  saveState(context);
 }
 
-function persistState(context: vscode.ExtensionContext) {
-  const persistentState: PersistentExtensionState = {
+function saveState(context: vscode.ExtensionContext) {
+  const saveState: ExtensionSaveState = {
     messages: state.messages,
   };
 
-  context.globalState.update("persistentState", persistentState);
+  context.globalState.update("savedState", saveState);
 }
 
 class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
@@ -125,7 +125,7 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
           this.sendCurrentStateToWebView();
         } else if (message.type === "userInput") {
           state.messages.push({ role: "user", content: message.content });
-          persistState(this.context);
+          saveState(this.context);
 
           // Send message to Anthropic
           // TODO:
@@ -149,7 +149,7 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
             const response = (msg.content[0] as TextBlock).text;
 
             state.messages.push({ role: "assistant", content: response });
-            persistState(this.context);
+            saveState(this.context);
 
             this.sendCurrentStateToWebView();
           })();
@@ -220,7 +220,7 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
 
   public clearChat() {
     state.messages = structuredClone(initialChatMessages);
-    persistState(this.context);
+    saveState(this.context);
 
     this.sendCurrentStateToWebView();
   }
