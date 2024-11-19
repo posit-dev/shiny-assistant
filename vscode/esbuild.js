@@ -5,6 +5,7 @@ const fs = require("fs");
 
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
+const metafile = process.argv.includes("--metafile");
 
 /**
  * @type {import('esbuild').Plugin}
@@ -47,6 +48,24 @@ const tailwindPlugin = {
   },
 };
 
+const metafilePlugin = {
+  name: "metafile",
+  setup(build) {
+    const outfile = build.initialOptions.outfile;
+    const bundleName = outfile.replace(/.*\/([^/]+)\.js$/, "$1");
+
+    build.onEnd((result) => {
+      if (result.metafile) {
+        console.log(`meta.${bundleName}.json`);
+        fs.writeFileSync(
+          `${bundleName}.esbuild-meta.json`,
+          JSON.stringify(result.metafile),
+        );
+      }
+    });
+  },
+};
+
 async function main() {
   const buildmap = {
     extension: esbuild.context({
@@ -60,10 +79,8 @@ async function main() {
       outfile: "dist/extension.js",
       external: ["vscode"],
       logLevel: "silent",
-      plugins: [
-        /* add to the end of plugins array */
-        esbuildProblemMatcherPlugin,
-      ],
+      metafile: metafile,
+      plugins: [metafilePlugin, esbuildProblemMatcherPlugin],
     }),
     webview: esbuild.context({
       entryPoints: ["webview/src/main.tsx"],
@@ -76,11 +93,8 @@ async function main() {
       outfile: "dist/webview/main.js",
       external: ["vscode", "vscode-webview"],
       logLevel: "silent",
-      plugins: [
-        tailwindPlugin,
-        /* add to the end of plugins array */
-        esbuildProblemMatcherPlugin,
-      ],
+      metafile: metafile,
+      plugins: [tailwindPlugin, metafilePlugin, esbuildProblemMatcherPlugin],
     }),
   };
 
