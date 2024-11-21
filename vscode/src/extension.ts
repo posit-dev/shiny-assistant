@@ -5,6 +5,7 @@ import type {
   TextDelta,
 } from "@anthropic-ai/sdk/resources/messages";
 import * as vscode from "vscode";
+import { loadSystemPrompt } from "./systemPrompt";
 
 export type Message = {
   role: "assistant" | "user";
@@ -31,14 +32,7 @@ export type ToWebviewStateMessage = {
   hasApiKey: boolean;
 };
 
-const systemPrompt = `You are a coding assistant that generates Python code.
-
-You are given a user's prompt and a codebase.
-
-You will generate Python code that satisfies the user's prompt.
-
-Put the generated code in triple backticks.
-`;
+let systemPrompt = "";
 
 // The chat messages that are shown with a new chat.
 const initialChatMessages: Array<Message> = [];
@@ -48,7 +42,7 @@ let state: ExtensionState = {
   anthropicApiKey: "",
 };
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   // Load saved state or use default
   state = context.globalState.get<ExtensionState>("savedState") || state;
 
@@ -57,6 +51,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace
       .getConfiguration("shinyAssistant")
       .get("anthropicApiKey") || "";
+
+  systemPrompt = await loadSystemPrompt(context);
 
   const provider = new ShinyAssistantViewProvider(
     context.extensionUri,
