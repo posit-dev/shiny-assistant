@@ -242,7 +242,6 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
       });
 
       for await (const chunk of stream) {
-        // TODO: Check for start and stop events, and also send them along.
         // if chunk is a message delta, update the assistant's message
         if (chunk.type === "content_block_delta") {
           if (chunk.delta.type === "text_delta") {
@@ -260,6 +259,9 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
         });
       }
 
+      // Check for and write any files in shinyapp blocks
+      await writeShinyAppFiles(assistantMessage.content);
+
       state.messages.push({
         ...assistantMessage,
         content: processShinyAppBlocks(assistantMessage.content),
@@ -270,6 +272,65 @@ class ShinyAssistantViewProvider implements vscode.WebviewViewProvider {
       // Handle error appropriately
     }
   }
+}
+
+/**
+ * Extracts files from shinyapp blocks and writes them to disk.
+ * Returns true if any files were written, false otherwise.
+ *
+ * @param content - The text content containing Shiny app code blocks
+ * @returns boolean indicating if any files were written
+ */
+async function writeShinyAppFiles(content: string): Promise<boolean> {
+  console.log("writeShinyAppFiles called");
+  const shinyAppBlocks =
+    content.match(/<SHINYAPP AUTORUN="[01]">[\s\S]*?<\/SHINYAPP>/g) || [];
+  let filesWritten = false;
+
+  console.log(shinyAppBlocks);
+
+  for (const block of shinyAppBlocks) {
+    const files = block.match(/<FILE NAME="[^"]+">[\s\S]*?<\/FILE>/g) || [];
+
+    console.log("files: ", files);
+    for (const file of files) {
+      console.log("FILE: ", file);
+      const nameMatch = file.match(/<FILE NAME="([^"]+)">/);
+      if (!nameMatch) continue;
+
+      const fileName = nameMatch[1];
+      const fileContent = file
+        .replace(/<FILE NAME="[^"]+">|<\/FILE>/g, "")
+        .trim();
+
+      console.log("fileContent: ", fileContent);
+
+      // Create the file
+      console.log("workspace: ", vscode.workspace);
+      console.log("workspaceFolders: ", vscode.workspace.workspaceFolders);
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      console.log("workspaceFolder: ", workspaceFolder);
+      if (!workspaceFolder) continue;
+
+      const filePath = vscode.Uri.joinPath(workspaceFolder.uri, fileName);
+      console.log("filePath: ", filePath);
+
+      try {
+        await vscode.workspace.fs.writeFile(filePath, Buffer.from(fileContent));
+        filesWritten = true;
+
+        // Open the file in the editor
+        const document = await vscode.workspace.openTextDocument(filePath);
+        console.log("document: ", document);
+        await vscode.window.showTextDocument(document, { preview: false });
+      } catch (error) {
+        console.error(`Error writing file ${fileName}:`, error);
+        vscode.window.showErrorMessage(`Failed to write file ${fileName}`);
+      }
+    }
+  }
+
+  return filesWritten;
 }
 
 /**
