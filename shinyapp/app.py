@@ -320,7 +320,7 @@ does not ask you to modify the code, then ignore the code.
         # Create a response message stream
         try:
             response_stream = await llm().messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-3-7-sonnet-20250219",
                 system=[
                     {
                         "type": "text",
