@@ -1,0 +1,38 @@
+name: Nightly Tests for Shiny Assistant
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  push:
+    branches:
+      - "testing**"
+  workflow_dispatch:
+
+jobs:
+  nightly-tests:
+    runs-on: ubuntu-latest
+    permissions: write-all
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tests/requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Run playwright test
+        id: playwright-test
+        run: python tests/run_smoke_test.py
