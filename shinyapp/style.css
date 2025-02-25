@@ -139,3 +139,8 @@ just borrowed from the `:checked` state for switches.*/
   font-family: monospace;
   margin-bottom: 0.2em;
 }
+
+#ss-overlay,
+#shiny-disconnected-overlay {
+  display: none !important;
+}
