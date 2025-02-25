@@ -1,3 +1,5 @@
+# pyright: reportPrivateUsage=false, reportUnusedFunction=false
+
 from __future__ import annotations
 
 import asyncio
@@ -6,21 +8,17 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Any, Literal, TypedDict, cast
+from typing import Literal, TypedDict, cast
 from urllib.parse import parse_qs
 
 from anthropic import APIStatusError, AsyncAnthropic, RateLimitError
 from anthropic.types import MessageParam
-from anthropic.types.beta.prompt_caching import RawPromptCachingBetaMessageStartEvent
-from anthropic.types.beta.prompt_caching.prompt_caching_beta_message_param import (
-    PromptCachingBetaMessageParam,
-)
+
 from app_utils import load_dotenv
 from htmltools import Tag
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.ui._card import CardItem
-from shiny.ui._chat_normalize import AnthropicNormalizer
 
 # from signature import validate_email_server, validate_email_ui
 
@@ -315,13 +313,13 @@ does not ask you to modify the code, then ignore the code.
 """
         # print(messages[-1]["content"])
 
-        messages = transform_messages_to_prompt_caching_format(messages)
+        messages = add_cache_breakpoints_to_messages(messages)
 
         await sync_latest_messages()
 
         # Create a response message stream
         try:
-            response_stream = await llm().beta.prompt_caching.messages.create(
+            response_stream = await llm().messages.create(
                 model="claude-3-5-sonnet-20241022",
                 system=[
                     {
@@ -368,11 +366,7 @@ does not ask you to modify the code, then ignore the code.
                 }
             )
         elif isinstance(e, APIStatusError):
-            if (
-                "error" in e.body
-                and "type" in e.body["error"]
-                and e.body["error"]["type"] == "overloaded_error"
-            ):
+            if e.status_code == 529:
                 await chat.append_message(
                     {
                         "role": "assistant",
@@ -549,12 +543,12 @@ def remove_consecutive_messages(
     return tuple(new_messages)
 
 
-def transform_messages_to_prompt_caching_format(
+def add_cache_breakpoints_to_messages(
     messages: list[MessageParam] | tuple[MessageParam, ...],
     max_cache_breakpoints: int = 3,
-) -> list[PromptCachingBetaMessageParam]:
+) -> list[MessageParam]:
     """
-    Transform a list/tuple of messages into the new prompt caching format.
+    Add cache breakpoints to a list/tuple of messages.
 
     Parameters
     ----------
@@ -567,10 +561,10 @@ def transform_messages_to_prompt_caching_format(
 
     Returns
     -------
-    list[PromptCachingBetaMessageParam]
+    list[MessageParam]
         The transformed messages in prompt caching format
     """
-    transformed: list[PromptCachingBetaMessageParam] = []
+    transformed: list[MessageParam] = []
     user_messages_transformed = 0
 
     for msg in reversed(messages):
@@ -609,23 +603,6 @@ def transform_messages_to_prompt_caching_format(
     return transformed
 
 
-# ======================================================================================
-# This is needed until https://github.com/posit-dev/py-shiny/pull/1755 is merged and
-# released.
-class AnthropicPromptCachingNormalizer(AnthropicNormalizer):
-    def can_normalize_chunk(self, chunk: Any) -> bool:
-
-        if isinstance(chunk, RawPromptCachingBetaMessageStartEvent):
-            return True
-
-        return super().can_normalize_chunk(chunk)
-
-
-ui._chat_normalize.message_normalizer_registry.register(
-    "anthropic",
-    AnthropicPromptCachingNormalizer(),
-    force=True,
-)
 # ======================================================================================
 
 

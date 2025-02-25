@@ -4,7 +4,7 @@ import hmac
 import os
 from urllib.parse import parse_qs
 
-from shiny import Inputs, Outputs, Session, module, reactive, ui
+from shiny import Inputs, Outputs, Session, module, ui
 
 with open(os.path.join(os.path.dirname(__file__), "denied.md")) as f:
     denied_message = ui.markdown(f.read())
