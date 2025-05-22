@@ -127,6 +127,40 @@ app_ui = ui.page_sidebar(
             ),
         ),
         ui.chat_ui("chat", height="100%"),
+        ui.div(style="flex: 1;"),
+        ui.tags.footer(
+            {"style": "display: flex; justify-content: space-around;"},
+            ui.div(
+                {"style": "flex: 0 1 auto;"},
+                ui.a(
+                    {"style": "color: #888; text-decoration: none;"},
+                    "© 2025 Posit Software, PBC",
+                    href="https://posit.co/",
+                    target="_blank",
+                ),
+            ),
+            ui.div(
+                {"style": "flex: 0 1 auto;"},
+                ui.span(
+                    {"style": "display: inline-block;"},
+                    ui.a(
+                        {"style": "color: #888; text-decoration: none;"},
+                        "Terms & Conditions",
+                        href="https://posit.co/about/posit-service-terms-of-use/",
+                        target="_blank",
+                    ),
+                ),
+                ui.div(
+                    {"style": "display: inline-block; margin-left: 80px;"},
+                    ui.a(
+                        {"style": "color: #888; text-decoration: none;"},
+                        "Privacy Policy",
+                        href="https://posit.co/about/privacy-policy/",
+                        target="_blank",
+                    ),
+                ),
+            ),
+        ),
         open="open",
         width="400px",
         style="height: 100%;",
