@@ -13,10 +13,8 @@ from urllib.parse import parse_qs
 
 from anthropic import APIStatusError, AsyncAnthropic, RateLimitError
 from anthropic.types import MessageParam
-
 from app_utils import load_dotenv
 from htmltools import Tag
-
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.ui._card import CardItem
 
@@ -129,9 +127,9 @@ app_ui = ui.page_sidebar(
         ui.chat_ui("chat", height="100%"),
         ui.div(style="flex: 1;"),
         ui.tags.footer(
-            {"style": "display: flex; justify-content: space-around;"},
+            {"class": "d-flex justify-content-center gap-5 px-3", "style": "font-size: 0.8em;"},
             ui.div(
-                {"style": "flex: 0 1 auto;"},
+                {"class": "flex"},
                 ui.a(
                     {"style": "color: #888; text-decoration: none;"},
                     "© 2025 Posit Software, PBC",
@@ -140,9 +138,9 @@ app_ui = ui.page_sidebar(
                 ),
             ),
             ui.div(
-                {"style": "flex: 0 1 auto;"},
+                {"class": "flex d-flex gap-3"},
                 ui.span(
-                    {"style": "display: inline-block;"},
+                    {"class": "display-inline-block"},
                     ui.a(
                         {"style": "color: #888; text-decoration: none;"},
                         "Terms & Conditions",
@@ -151,7 +149,7 @@ app_ui = ui.page_sidebar(
                     ),
                 ),
                 ui.div(
-                    {"style": "display: inline-block; margin-left: 80px;"},
+                    {"class": "display-inline-block"},
                     ui.a(
                         {"style": "color: #888; text-decoration: none;"},
                         "Privacy Policy",
