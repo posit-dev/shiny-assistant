@@ -1,0 +1,42 @@
+name: CI Tests for Shiny Assistant
+
+
+on:
+    pull_request:
+        branches:
+        - main
+    push:
+        branches:
+            - "testing**"
+
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r tests/requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Run playwright test
+        env:
+            ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        id: playwright-test
+        run: pytest test_local_app.py
