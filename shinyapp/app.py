@@ -334,7 +334,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         messages: tuple[MessageParam, ...] = (
             chat.messages(  # pyright: ignore[reportUnknownMemberType]
-                token_limits=(16000, 3000), format="anthropic"
+                token_limits=(32000, 6000), format="anthropic"
             )
         )
 
