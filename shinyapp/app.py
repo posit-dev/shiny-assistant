@@ -7,14 +7,16 @@ import base64
 import json
 import os
 import re
+from copy import deepcopy
 from pathlib import Path
 from typing import Literal, TypedDict, cast
 from urllib.parse import parse_qs
 
 from anthropic import APIStatusError, AsyncAnthropic, RateLimitError
-from anthropic.types import MessageParam
+from anthropic.types import CacheControlEphemeralParam, MessageParam
 from app_utils import load_dotenv
 from htmltools import Tag
+from local_types import MessageParam2
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.ui._card import CardItem
 
@@ -127,7 +129,10 @@ app_ui = ui.page_sidebar(
         ui.chat_ui("chat", height="100%"),
         ui.div(style="flex: 1;"),
         ui.tags.footer(
-            {"class": "d-flex justify-content-center gap-5 px-3", "style": "font-size: 0.8em;"},
+            {
+                "class": "d-flex justify-content-center gap-5 px-3",
+                "style": "font-size: 0.8em;",
+            },
             ui.div(
                 {"class": "flex"},
                 ui.a(
@@ -327,25 +332,37 @@ def server(input: Inputs, output: Outputs, session: Session):
         nonlocal restoring
         restoring = False
 
-        messages = chat.messages(token_limits=(16000, 3000), format="anthropic")
-        messages = remove_consecutive_messages(messages)
+        messages: tuple[MessageParam, ...] = (
+            chat.messages(  # pyright: ignore[reportUnknownMemberType]
+                token_limits=(16000, 3000), format="anthropic"
+            )
+        )
 
-        messages[-1][
-            "content"
-        ] = f"""
-The following is the current app code in JSON format. The text that comes after this app
-code might ask you to modify the code. If it does, please modify the code. If the text
-does not ask you to modify the code, then ignore the code.
+        # messages2 is a MessageParam2, which helps with type checking here. We
+        # will assign it back to messages later.
+        messages2 = normalize_messages(messages)
+        messages2 = add_cache_breakpoints_to_messages(messages2)
+
+        # We add this last message part after adding the cache breakpoint,
+        # because this message part will not be used in future message turns.
+        messages2[-1]["content"].append(
+            {
+                "type": "text",
+                "text": f"""
+<CONTEXT>
+The following is the current app code in JSON format. The text that came before this app
+code might ask you to modify the code. If , please modify the code. If the text
+did not ask you to modify the code, then ignore the code.
 
 ```
 {input.editor_code()}
 ```
+</CONTEXT>
+""",
+            }
+        )
 
-{ messages[-1]["content"] }
-"""
-        # print(messages[-1]["content"])
-
-        messages = add_cache_breakpoints_to_messages(messages)
+        messages = cast(tuple[MessageParam, ...], messages2)
 
         await sync_latest_messages()
 
@@ -380,6 +397,10 @@ does not ask you to modify the code, then ignore the code.
                     ):
                         ...
                         # print(chunk.delta.text, end="")
+                    else:
+                        ...
+                        # Uncomment to view other chunks, which include response metadata
+                        # print(json.dumps(chunk.model_dump(), indent=2))
                     yield chunk
                 # print("")
             except Exception as e:
@@ -512,7 +533,7 @@ does not ask you to modify the code, then ignore the code.
         nonlocal last_message_sent
 
         with reactive.isolate():
-            messages = chat.messages(
+            messages = chat.messages(  # pyright: ignore[reportUnknownMemberType]
                 format="anthropic",
                 token_limits=None,
                 transform_user="all",
@@ -575,10 +596,34 @@ def remove_consecutive_messages(
     return tuple(new_messages)
 
 
+# Normalize messages so that insteaed of content being a string, it is a
+# dictionary with "role" and "content" keys. This is so that the format
+# is stable
+def normalize_messages(
+    messages: tuple[MessageParam, ...],
+) -> tuple[MessageParam2, ...]:
+    normalized_messages: list[MessageParam2] = []
+    for msg in messages:
+        content = msg["content"]
+        if isinstance(content, str):
+            normalized_messages.append(
+                {"role": "user", "content": [{"type": "text", "text": content}]}
+            )
+        else:
+            if "role" not in msg or "content" not in msg:
+                raise ValueError(
+                    "Message must be a dictionary with 'role' and 'content' keys."
+                )
+            new_msg: MessageParam2 = msg.copy()  # pyright: ignore[reportAssignmentType]
+            normalized_messages.append(new_msg)
+
+    return tuple(normalized_messages)
+
+
 def add_cache_breakpoints_to_messages(
-    messages: list[MessageParam] | tuple[MessageParam, ...],
+    messages: list[MessageParam2] | tuple[MessageParam2, ...],
     max_cache_breakpoints: int = 3,
-) -> list[MessageParam]:
+) -> tuple[MessageParam2, ...]:
     """
     Add cache breakpoints to a list/tuple of messages.
 
@@ -593,31 +638,34 @@ def add_cache_breakpoints_to_messages(
 
     Returns
     -------
-    list[MessageParam]
+    list[MessageParam2]
         The transformed messages in prompt caching format
     """
-    transformed: list[MessageParam] = []
+    transformed: list[MessageParam2] = []
     user_messages_transformed = 0
 
     for msg in reversed(messages):
         if msg["role"] == "user" and user_messages_transformed < max_cache_breakpoints:
-            content = msg["content"]
-            if not isinstance(content, str):
-                raise ValueError(
-                    "User messages must be strings, but got a non-string content: "
-                    + str(content)
-                )
+            content = deepcopy(msg["content"])
+            content_last_part = deepcopy(content[-1])
+            if (
+                content_last_part["type"] == "thinking"
+                or content_last_part["type"] == "redacted_thinking"
+            ):
+                # Can't add cache-control to these blocks
+                ...
+            else:
+                # Mark the last item in the content as ephemeral
+                cache_control: CacheControlEphemeralParam = {"type": "ephemeral"}
+                content_last_part["cache_control"] = cache_control
+
+            content[-1] = content_last_part
+
             transformed.insert(
                 0,
                 {
                     "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": content,
-                            "cache_control": {"type": "ephemeral"},
-                        }
-                    ],
+                    "content": content,
                 },
             )
             user_messages_transformed += 1
@@ -625,14 +673,9 @@ def add_cache_breakpoints_to_messages(
             # Keep assistant messages as is. We're checking for string content mostly
             # to make the type checker happy.
             content = msg["content"]
-            if not isinstance(content, str):
-                raise ValueError(
-                    f"{msg['role']} messages must be strings, but got a non-string content: "
-                    + str(content)
-                )
             transformed.insert(0, {"role": msg["role"], "content": content})
 
-    return transformed
+    return tuple(transformed)
 
 
 # ======================================================================================
