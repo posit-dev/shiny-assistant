@@ -1,4 +1,4 @@
-shiny
+shiny>=1.9.0
 python-dotenv
 tokenizers
 anthropic
