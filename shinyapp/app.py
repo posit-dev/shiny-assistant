@@ -307,10 +307,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         messages=restored_messages,
     )
 
-    async def sync_latest_messages_locked():
-        async with reactive.lock():
-            await sync_latest_messages()
-
     @render.ui
     def shinylive_iframe():
         if not shinylive_panel_visible():
@@ -448,7 +444,9 @@ did not ask you to modify the code, then ignore the code.
     @chat.transform_assistant_response
     async def transform_response(content: str, chunk: str, done: bool) -> str:
         if done:
-            asyncio.create_task(sync_latest_messages_locked())
+            # shinychat stores the final message right after this function
+            # returns, before the stream task next yields, so the new task sees it.
+            asyncio.create_task(sync_latest_messages())
 
         # TODO: This is inefficient because it does this processing for every chunk,
         # which means it will process the same content multiple times. It would be
@@ -457,22 +455,16 @@ did not ask you to modify the code, then ignore the code.
         # Only do this when streaming. (We don't to run it when restoring messages,
         # which does not use streaming.)
         if chunk != "":
-            async with reactive.lock():
-                with reactive.isolate():
-                    # If we see the <SHINYAPP> tag, make sure the shinylive panel is
-                    # visible.
-                    if '<SHINYAPP AUTORUN="1">' in content:
-                        shinylive_panel_visible.set(True)
+            with reactive.isolate():
+                # If we see the <SHINYAPP> tag, make sure the shinylive panel is
+                # visible.
+                if '<SHINYAPP AUTORUN="1">' in content:
+                    shinylive_panel_visible.set(True)
 
-                        # The first time we see the </SHINYAPP> tag, set the files.
-                        if (
-                            files_in_shinyapp_tags() is None
-                            and "</SHINYAPP>" in content
-                        ):
-                            files = shinyapp_tag_contents_to_filecontents(content)
-                            files_in_shinyapp_tags.set(files)
-
-                        await reactive.flush()
+                    # The first time we see the </SHINYAPP> tag, set the files.
+                    if files_in_shinyapp_tags() is None and "</SHINYAPP>" in content:
+                        files = shinyapp_tag_contents_to_filecontents(content)
+                        files_in_shinyapp_tags.set(files)
 
         content = re.sub(
             '<SHINYAPP AUTORUN="[01]">', "<div class='assistant-shinyapp'>\n", content
